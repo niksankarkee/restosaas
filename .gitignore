@@ -1,0 +1,15 @@
+*node_modules*
+*dist*
+*build*
+*coverage*
+*logs*
+*tmp*
+*tmp*
+*tmp*
+*tmp*
+*tmp*
+*tmp*
+*.next*
+*pgdata*
+*pgadmin*
+*pgadmin*
