@@ -32,27 +32,96 @@ interface Restaurant {
   }>;
 }
 
-async function getRestaurants(area?: string) {
-  const { data } = await api.get('/restaurants', { params: { area } });
+async function getRestaurants(searchParams: {
+  area?: string;
+  cuisine?: string;
+  date?: string;
+  time?: string;
+  people?: string;
+  budget?: string;
+}) {
+  const params: any = {};
+
+  if (searchParams.area) params.area = searchParams.area;
+  if (searchParams.cuisine) params.cuisine = searchParams.cuisine;
+  if (searchParams.date) params.date = searchParams.date;
+  if (searchParams.time) params.time = searchParams.time;
+  if (searchParams.people) params.people = searchParams.people;
+  if (searchParams.budget) params.budget = searchParams.budget;
+
+  const { data } = await api.get('/restaurants', { params });
   return data as Restaurant[];
 }
 
 export default async function Restaurants({
   searchParams,
 }: {
-  searchParams: { area?: string };
+  searchParams: {
+    area?: string;
+    cuisine?: string;
+    date?: string;
+    time?: string;
+    people?: string;
+    budget?: string;
+  };
 }) {
-  const items = await getRestaurants(searchParams?.area);
+  const items = await getRestaurants(searchParams);
+
+  // Sort restaurants by rating (highest first) for recommendations
+  const sortedRestaurants = [...items].sort(
+    (a, b) => b.AvgRating - a.AvgRating
+  );
+
+  const hasSearchParams = Object.values(searchParams).some((value) => value);
 
   return (
     <main className='max-w-6xl mx-auto p-6'>
       <div className='mb-8'>
-        <h1 className='text-3xl font-bold text-gray-900 mb-2'>Restaurants</h1>
-        <p className='text-gray-600'>Discover amazing dining experiences</p>
+        <h1 className='text-3xl font-bold text-gray-900 mb-2'>
+          {hasSearchParams ? 'Search Results' : 'Recommended Restaurants'}
+        </h1>
+        <p className='text-gray-600'>
+          {hasSearchParams
+            ? `Found ${items.length} restaurant${
+                items.length !== 1 ? 's' : ''
+              } matching your search`
+            : 'Discover amazing restaurants recommended for you'}
+        </p>
+
+        {/* Show search parameters if any */}
+        {hasSearchParams && (
+          <div className='mt-4 flex flex-wrap gap-2'>
+            {searchParams.area && (
+              <Badge variant='secondary' className='flex items-center gap-1'>
+                <MapPin className='h-3 w-3' />
+                {searchParams.area}
+              </Badge>
+            )}
+            {searchParams.cuisine && (
+              <Badge variant='secondary' className='flex items-center gap-1'>
+                <Utensils className='h-3 w-3' />
+                {searchParams.cuisine}
+              </Badge>
+            )}
+            {searchParams.budget && searchParams.budget !== 'all' && (
+              <Badge variant='secondary' className='flex items-center gap-1'>
+                <DollarSign className='h-3 w-3' />
+                {searchParams.budget}
+              </Badge>
+            )}
+            {searchParams.people && (
+              <Badge variant='secondary' className='flex items-center gap-1'>
+                <Clock className='h-3 w-3' />
+                {searchParams.people}{' '}
+                {searchParams.people === '1' ? 'Guest' : 'Guests'}
+              </Badge>
+            )}
+          </div>
+        )}
       </div>
 
       <div className='space-y-6'>
-        {items.map((restaurant) => {
+        {sortedRestaurants.map((restaurant) => {
           const mainImage =
             restaurant.Images?.find((img) => img.IsMain) ||
             restaurant.Images?.[0];

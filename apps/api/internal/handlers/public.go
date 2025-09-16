@@ -14,16 +14,89 @@ type PublicHandler struct{ DB *gorm.DB }
 
 func (h *PublicHandler) ListRestaurants(c *gin.Context) {
 	area := c.Query("area")
+	cuisine := c.Query("cuisine")
+	budget := c.Query("budget")
+	people := c.Query("people")
+	// Note: date and time parameters are reserved for future reservation filtering
+	_ = c.Query("date")
+	_ = c.Query("time")
+
 	q := h.DB.Model(&db.Restaurant{})
+
+	// Filter by area
 	if area != "" {
-		q = q.Where("area ILIKE ?", area)
+		q = q.Where("area ILIKE ? OR place ILIKE ?", "%"+area+"%", "%"+area+"%")
 	}
+
+	// Filter by cuisine
+	if cuisine != "" {
+		q = q.Where("genre ILIKE ?", "%"+cuisine+"%")
+	}
+
+	// Filter by budget
+	if budget != "" && budget != "all" {
+		q = q.Where("budget = ?", budget)
+	}
+
+	// Filter by capacity (number of people)
+	if people != "" {
+		q = q.Where("capacity >= ?", people)
+	}
+
+	// Only show open restaurants
+	q = q.Where("is_open = ?", true)
+
 	var items []db.Restaurant
-	if err := q.Preload("Images").Limit(100).Find(&items).Error; err != nil {
+	if err := q.Preload("Images").Preload("OpenHours").Limit(100).Find(&items).Error; err != nil {
 		c.JSON(500, gin.H{"error": err.Error()})
 		return
 	}
-	c.JSON(200, items)
+
+	// Calculate average ratings for each restaurant
+	var restaurantsWithRatings []gin.H
+	for _, restaurant := range items {
+		var reviews []db.Review
+		h.DB.Where("restaurant_id = ? AND is_approved = ?", restaurant.ID, true).Find(&reviews)
+
+		var totalRating int
+		var reviewCount int
+		for _, review := range reviews {
+			totalRating += review.Rating
+			reviewCount++
+		}
+
+		avgRating := 0.0
+		if reviewCount > 0 {
+			avgRating = float64(totalRating) / float64(reviewCount)
+		}
+
+		restaurantsWithRatings = append(restaurantsWithRatings, gin.H{
+			"ID":          restaurant.ID,
+			"Slug":        restaurant.Slug,
+			"Name":        restaurant.Name,
+			"Slogan":      restaurant.Slogan,
+			"Place":       restaurant.Place,
+			"Genre":       restaurant.Genre,
+			"Budget":      restaurant.Budget,
+			"Title":       restaurant.Title,
+			"Description": restaurant.Description,
+			"Area":        restaurant.Area,
+			"Address":     restaurant.Address,
+			"Phone":       restaurant.Phone,
+			"Timezone":    restaurant.Timezone,
+			"Capacity":    restaurant.Capacity,
+			"IsOpen":      restaurant.IsOpen,
+			"OpenHours":   restaurant.OpenHours,
+			"Images":      restaurant.Images,
+			"MainImageID": restaurant.MainImageID,
+			"AvgRating":   avgRating,
+			"ReviewCount": reviewCount,
+			"CreatedAt":   restaurant.CreatedAt,
+			"UpdatedAt":   restaurant.UpdatedAt,
+		})
+	}
+
+	c.JSON(200, restaurantsWithRatings)
 }
 
 func (h *PublicHandler) GetRestaurant(c *gin.Context) {
