@@ -18,6 +18,14 @@ func Mount(r *gin.Engine, gdb *gorm.DB) {
 	restaurant := handlers.RestaurantHandler{DB: gdb}
 	organization := handlers.OrganizationHandler{DB: gdb}
 
+	// Health check endpoint
+	r.GET("/health", func(c *gin.Context) {
+		c.JSON(200, gin.H{
+			"status":  "healthy",
+			"service": "restosaas-api",
+		})
+	})
+
 	api := r.Group("/api")
 	api.Use(auth.OptionalAuth(), auth.AddTokenToResponse())
 	{
