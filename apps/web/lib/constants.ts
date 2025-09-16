@@ -1,0 +1,352 @@
+// Internationalization constants for the restaurant application
+export const APP_TEXT = {
+  // Common UI Elements
+  COMMON: {
+    SEARCH: 'Search',
+    CANCEL: 'Cancel',
+    SAVE: 'Save',
+    EDIT: 'Edit',
+    DELETE: 'Delete',
+    CREATE: 'Create',
+    UPDATE: 'Update',
+    SUBMIT: 'Submit',
+    LOADING: 'Loading...',
+    ERROR: 'Error',
+    SUCCESS: 'Success',
+    CONFIRM: 'Confirm',
+    YES: 'Yes',
+    NO: 'No',
+    CLOSE: 'Close',
+    OPEN: 'Open',
+    CLOSED: 'Closed',
+    GUEST: 'Guest',
+    GUESTS: 'Guests',
+    PEOPLE: 'People',
+    DATE: 'Date',
+    TIME: 'Time',
+    AREA: 'Area',
+    BUDGET: 'Budget',
+    CUISINE: 'Cuisine',
+    RATING: 'Rating',
+    REVIEWS: 'Reviews',
+    MENU: 'Menu',
+    GALLERY: 'Gallery',
+    MAP: 'Map',
+    OVERVIEW: 'Overview',
+    DESCRIPTION: 'Description',
+    ADDRESS: 'Address',
+    PHONE: 'Phone',
+    CAPACITY: 'Capacity',
+    STATUS: 'Status',
+    CREATED_AT: 'Created At',
+    UPDATED_AT: 'Updated At',
+  },
+
+  // Landing Page
+  LANDING: {
+    HERO_TITLE: 'Find Your Perfect',
+    HERO_SUBTITLE: 'Dining Experience',
+    HERO_DESCRIPTION:
+      'Discover amazing restaurants, make reservations, and enjoy great food',
+    SEARCH_TITLE: 'Search Restaurants',
+    SEARCH_DESCRIPTION: 'Find the perfect restaurant for your next meal',
+    FEATURES_TITLE: 'Why Choose RestoSaaS?',
+    FEATURES_DESCRIPTION:
+      'The best platform for discovering and booking restaurants',
+    FEATURE_1_TITLE: 'Easy Search',
+    FEATURE_1_DESCRIPTION:
+      'Find restaurants by location, cuisine, and preferences with our advanced search',
+    FEATURE_2_TITLE: 'Instant Reservations',
+    FEATURE_2_DESCRIPTION:
+      'Book your table instantly with real-time availability and confirmation',
+    FEATURE_3_TITLE: 'Curated Selection',
+    FEATURE_3_DESCRIPTION:
+      'Discover handpicked restaurants with verified reviews and ratings',
+  },
+
+  // Search Form
+  SEARCH: {
+    AREA: 'Area',
+    CUISINE: 'Cuisine',
+    DATE: 'Date',
+    TIME: 'Time',
+    PEOPLE: 'People',
+    BUDGET: 'Budget',
+    AREA_PLACEHOLDER: 'Enter area or city',
+    CUISINE_PLACEHOLDER:
+      'Enter cuisine type (e.g., Italian, Chinese, Japanese)',
+    DATE_PLACEHOLDER: 'Select date',
+    TIME_PLACEHOLDER: 'Select time',
+    PEOPLE_PLACEHOLDER: 'Number of guests',
+    BUDGET_ANY: 'Any Budget',
+    BUDGET_BUDGET: '$ - Budget Friendly',
+    BUDGET_MODERATE: '$$ - Moderate',
+    BUDGET_EXPENSIVE: '$$$ - Expensive',
+    BUDGET_VERY_EXPENSIVE: '$$$$ - Very Expensive',
+    SEARCH_BUTTON: 'Search Restaurants',
+    ANY_TIME: 'Any Time',
+    ANY_CUISINE: 'Any Cuisine',
+  },
+
+  // Restaurant List
+  RESTAURANTS: {
+    TITLE: 'Restaurants',
+    SEARCH_RESULTS: 'Search Results',
+    RECOMMENDED: 'Recommended Restaurants',
+    FOUND_COUNT: 'Found {count} restaurant{plural} matching your search',
+    DISCOVER_DESCRIPTION: 'Discover amazing restaurants recommended for you',
+    NO_RESTAURANTS: 'No restaurants found',
+    NO_RESTAURANTS_DESCRIPTION: 'No restaurants match your current filter.',
+    NO_MATCH_FOUND: 'No restaurants match your search criteria.',
+    SHOWING_RECOMMENDATIONS: 'Here are some recommended restaurants instead:',
+    VIEW_MENU: 'View Menu',
+    MAKE_RESERVATION: 'Make a Reservation',
+    WRITE_REVIEW: 'Write a Review',
+    VIEW_DETAILS: 'View Details',
+    RATING_COUNT: '{rating} ({count} reviews)',
+    CAPACITY_TEXT: '{capacity} people',
+    OPEN_NOW: 'Open Now',
+    CLOSED_NOW: 'Closed Now',
+  },
+
+  // Restaurant Details
+  RESTAURANT_DETAILS: {
+    OVERVIEW: 'Overview',
+    MENU: 'Menu',
+    GALLERY: 'Gallery',
+    REVIEWS: 'Reviews',
+    MAP: 'Map',
+    NO_IMAGES: 'No images available.',
+    NO_MENU: 'No menu available at this time.',
+    NO_REVIEWS: 'No reviews yet.',
+    BE_FIRST_REVIEW: 'Be the first to write a review!',
+    AVERAGE_RATING: 'Average Rating',
+    TOTAL_REVIEWS: 'Total Reviews',
+    OPENING_HOURS: 'Opening Hours',
+    CONTACT_INFO: 'Contact Information',
+    RESTAURANT_INFO: 'Restaurant Information',
+  },
+
+  // Forms
+  FORMS: {
+    RESTAURANT_NAME: 'Restaurant Name',
+    SLOGAN: 'Slogan',
+    LOCATION: 'Location',
+    CUISINE_TYPE: 'Cuisine Type',
+    BUDGET_RANGE: 'Budget Range',
+    TITLE: 'Title',
+    DESCRIPTION: 'Description',
+    PHONE_NUMBER: 'Phone Number',
+    RESTAURANT_CAPACITY: 'Restaurant Capacity',
+    RESTAURANT_STATUS: 'Restaurant Status',
+    REQUIRED_FIELD: 'This field is required',
+    MIN_LENGTH: 'Must be at least {min} characters',
+    MAX_LENGTH: 'Must be no more than {max} characters',
+    INVALID_EMAIL: 'Please enter a valid email address',
+    INVALID_PHONE: 'Please enter a valid phone number',
+    INVALID_URL: 'Please enter a valid URL',
+    INVALID_NUMBER: 'Please enter a valid number',
+    MIN_VALUE: 'Must be at least {min}',
+    MAX_VALUE: 'Must be no more than {max}',
+  },
+
+  // Validation Messages
+  VALIDATION: {
+    REQUIRED: 'This field is required',
+    EMAIL_INVALID: 'Please enter a valid email address',
+    PHONE_INVALID: 'Please enter a valid phone number',
+    URL_INVALID: 'Please enter a valid URL',
+    NUMBER_INVALID: 'Please enter a valid number',
+    MIN_LENGTH: 'Must be at least {min} characters',
+    MAX_LENGTH: 'Must be no more than {max} characters',
+    MIN_VALUE: 'Must be at least {min}',
+    MAX_VALUE: 'Must be no more than {max}',
+    PATTERN_MISMATCH: 'Please enter a valid format',
+    CUSTOM_ERROR: 'Please check your input',
+  },
+
+  // Time Options
+  TIME_OPTIONS: [
+    'Any Time',
+    '6:00 AM',
+    '7:00 AM',
+    '8:00 AM',
+    '9:00 AM',
+    '10:00 AM',
+    '11:00 AM',
+    '12:00 PM',
+    '1:00 PM',
+    '2:00 PM',
+    '3:00 PM',
+    '4:00 PM',
+    '5:00 PM',
+    '6:00 PM',
+    '7:00 PM',
+    '8:00 PM',
+    '9:00 PM',
+    '10:00 PM',
+    '11:00 PM',
+  ],
+
+  // Budget Options
+  BUDGET_OPTIONS: [
+    { value: 'all', label: 'Any Budget' },
+    { value: '$', label: '$ - Budget Friendly' },
+    { value: '$$', label: '$$ - Moderate' },
+    { value: '$$$', label: '$$$ - Expensive' },
+    { value: '$$$$', label: '$$$$ - Very Expensive' },
+  ],
+
+  // Common Cuisine Types
+  CUISINE_TYPES: [
+    'Italian',
+    'Chinese',
+    'Japanese',
+    'Indian',
+    'Mexican',
+    'American',
+    'French',
+    'Thai',
+    'Mediterranean',
+    'Korean',
+    'Vietnamese',
+    'Greek',
+    'Spanish',
+    'German',
+    'Other',
+  ],
+} as const;
+
+// Theme colors for the restaurant application
+export const THEME_COLORS = {
+  // Primary colors
+  PRIMARY: {
+    50: '#fef2f2',
+    100: '#fee2e2',
+    200: '#fecaca',
+    300: '#fca5a5',
+    400: '#f87171',
+    500: '#ef4444', // Main red
+    600: '#dc2626',
+    700: '#b91c1c',
+    800: '#991b1b',
+    900: '#7f1d1d',
+    950: '#450a0a',
+  },
+
+  // Secondary colors (warm orange)
+  SECONDARY: {
+    50: '#fff7ed',
+    100: '#ffedd5',
+    200: '#fed7aa',
+    300: '#fdba74',
+    400: '#fb923c',
+    500: '#f97316', // Main orange
+    600: '#ea580c',
+    700: '#c2410c',
+    800: '#9a3412',
+    900: '#7c2d12',
+    950: '#431407',
+  },
+
+  // Accent colors (golden yellow)
+  ACCENT: {
+    50: '#fefce8',
+    100: '#fef9c3',
+    200: '#fef08a',
+    300: '#fde047',
+    400: '#facc15',
+    500: '#eab308', // Main gold
+    600: '#ca8a04',
+    700: '#a16207',
+    800: '#854d0e',
+    900: '#713f12',
+    950: '#422006',
+  },
+
+  // Neutral colors
+  NEUTRAL: {
+    50: '#fafafa',
+    100: '#f5f5f5',
+    200: '#e5e5e5',
+    300: '#d4d4d4',
+    400: '#a3a3a3',
+    500: '#737373',
+    600: '#525252',
+    700: '#404040',
+    800: '#262626',
+    900: '#171717',
+    950: '#0a0a0a',
+  },
+
+  // Success colors
+  SUCCESS: {
+    50: '#f0fdf4',
+    100: '#dcfce7',
+    200: '#bbf7d0',
+    300: '#86efac',
+    400: '#4ade80',
+    500: '#22c55e',
+    600: '#16a34a',
+    700: '#15803d',
+    800: '#166534',
+    900: '#14532d',
+    950: '#052e16',
+  },
+
+  // Warning colors
+  WARNING: {
+    50: '#fffbeb',
+    100: '#fef3c7',
+    200: '#fde68a',
+    300: '#fcd34d',
+    400: '#fbbf24',
+    500: '#f59e0b',
+    600: '#d97706',
+    700: '#b45309',
+    800: '#92400e',
+    900: '#78350f',
+    950: '#451a03',
+  },
+
+  // Error colors
+  ERROR: {
+    50: '#fef2f2',
+    100: '#fee2e2',
+    200: '#fecaca',
+    300: '#fca5a5',
+    400: '#f87171',
+    500: '#ef4444',
+    600: '#dc2626',
+    700: '#b91c1c',
+    800: '#991b1b',
+    900: '#7f1d1d',
+    950: '#450a0a',
+  },
+} as const;
+
+// CSS custom properties for theme
+export const THEME_CSS_VARS = {
+  '--color-primary': THEME_COLORS.PRIMARY[500],
+  '--color-primary-hover': THEME_COLORS.PRIMARY[600],
+  '--color-primary-light': THEME_COLORS.PRIMARY[100],
+  '--color-secondary': THEME_COLORS.SECONDARY[500],
+  '--color-secondary-hover': THEME_COLORS.SECONDARY[600],
+  '--color-secondary-light': THEME_COLORS.SECONDARY[100],
+  '--color-accent': THEME_COLORS.ACCENT[500],
+  '--color-accent-hover': THEME_COLORS.ACCENT[600],
+  '--color-accent-light': THEME_COLORS.ACCENT[100],
+  '--color-success': THEME_COLORS.SUCCESS[500],
+  '--color-warning': THEME_COLORS.WARNING[500],
+  '--color-error': THEME_COLORS.ERROR[500],
+  '--color-neutral-50': THEME_COLORS.NEUTRAL[50],
+  '--color-neutral-100': THEME_COLORS.NEUTRAL[100],
+  '--color-neutral-200': THEME_COLORS.NEUTRAL[200],
+  '--color-neutral-300': THEME_COLORS.NEUTRAL[300],
+  '--color-neutral-400': THEME_COLORS.NEUTRAL[400],
+  '--color-neutral-500': THEME_COLORS.NEUTRAL[500],
+  '--color-neutral-600': THEME_COLORS.NEUTRAL[600],
+  '--color-neutral-700': THEME_COLORS.NEUTRAL[700],
+  '--color-neutral-800': THEME_COLORS.NEUTRAL[800],
+  '--color-neutral-900': THEME_COLORS.NEUTRAL[900],
+} as const;

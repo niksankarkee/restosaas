@@ -4,114 +4,278 @@
 
 .prose h1,h2,h3 { @apply font-bold; }
 
-
+/* Restaurant Theme Colors */
+:root {
+  --color-primary: #dc2626;
+  --color-primary-hover: #b91c1c;
+  --color-primary-light: #fef2f2;
+  --color-primary-dark: #991b1b;
+  --color-secondary: #ea580c;
+  --color-secondary-hover: #c2410c;
+  --color-secondary-light: #fff7ed;
+  --color-secondary-dark: #9a3412;
+  --color-accent: #ca8a04;
+  --color-accent-hover: #a16207;
+  --color-accent-light: #fefce8;
+  --color-accent-dark: #713f12;
+  --color-success: #16a34a;
+  --color-success-hover: #15803d;
+  --color-success-light: #f0fdf4;
+  --color-warning: #d97706;
+  --color-warning-hover: #b45309;
+  --color-warning-light: #fffbeb;
+  --color-error: #dc2626;
+  --color-error-hover: #b91c1c;
+  --color-error-light: #fef2f2;
+  --color-neutral-50: #fafafa;
+  --color-neutral-100: #f5f5f5;
+  --color-neutral-200: #e5e5e5;
+  --color-neutral-300: #d4d4d4;
+  --color-neutral-400: #a3a3a3;
+  --color-neutral-500: #737373;
+  --color-neutral-600: #525252;
+  --color-neutral-700: #404040;
+  --color-neutral-800: #262626;
+  --color-neutral-900: #171717;
+}
 
 @layer base {
   :root {
-
-  --background: 0 0% 100%;
-
-  --foreground: 0 0% 3.9%;
-
-  --card: 0 0% 100%;
-
-  --card-foreground: 0 0% 3.9%;
-
-  --popover: 0 0% 100%;
-
-  --popover-foreground: 0 0% 3.9%;
-
-  --primary: 0 0% 9%;
-
-  --primary-foreground: 0 0% 98%;
-
-  --secondary: 0 0% 96.1%;
-
-  --secondary-foreground: 0 0% 9%;
-
-  --muted: 0 0% 96.1%;
-
-  --muted-foreground: 0 0% 45.1%;
-
-  --accent: 0 0% 96.1%;
-
-  --accent-foreground: 0 0% 9%;
-
-  --destructive: 0 84.2% 60.2%;
-
-  --destructive-foreground: 0 0% 98%;
-
-  --border: 0 0% 89.8%;
-
-  --input: 0 0% 89.8%;
-
-  --ring: 0 0% 3.9%;
-
-  --chart-1: 12 76% 61%;
-
-  --chart-2: 173 58% 39%;
-
-  --chart-3: 197 37% 24%;
-
-  --chart-4: 43 74% 66%;
-
-  --chart-5: 27 87% 67%;
-
-  --radius: 0.5rem }
+    --background: 0 0% 100%;
+    --foreground: 0 0% 9%;
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 9%;
+    --primary: 0 84% 60%;
+    --primary-foreground: 0 0% 98%;
+    --secondary: 24 95% 53%;
+    --secondary-foreground: 0 0% 98%;
+    --muted: 0 0% 96%;
+    --muted-foreground: 0 0% 45%;
+    --accent: 45 93% 47%;
+    --accent-foreground: 0 0% 9%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 0 0% 90%;
+    --input: 0 0% 90%;
+    --ring: 0 84% 60%;
+    --chart-1: 12 76% 61%;
+    --chart-2: 173 58% 39%;
+    --chart-3: 197 37% 24%;
+    --chart-4: 43 74% 66%;
+    --chart-5: 27 87% 67%;
+    --radius: 0.5rem;
+  }
+  
   .dark {
-
-  --background: 0 0% 3.9%;
-
-  --foreground: 0 0% 98%;
-
-  --card: 0 0% 3.9%;
-
-  --card-foreground: 0 0% 98%;
-
-  --popover: 0 0% 3.9%;
-
-  --popover-foreground: 0 0% 98%;
-
-  --primary: 0 0% 98%;
-
-  --primary-foreground: 0 0% 9%;
-
-  --secondary: 0 0% 14.9%;
-
-  --secondary-foreground: 0 0% 98%;
-
-  --muted: 0 0% 14.9%;
-
-  --muted-foreground: 0 0% 63.9%;
-
-  --accent: 0 0% 14.9%;
-
-  --accent-foreground: 0 0% 98%;
-
-  --destructive: 0 62.8% 30.6%;
-
-  --destructive-foreground: 0 0% 98%;
-
-  --border: 0 0% 14.9%;
-
-  --input: 0 0% 14.9%;
-
-  --ring: 0 0% 83.1%;
-
-  --chart-1: 220 70% 50%;
-
-  --chart-2: 160 60% 45%;
-
-  --chart-3: 30 80% 55%;
-
-  --chart-4: 280 65% 60%;
-
-  --chart-5: 340 75% 55% } }
-
-
+    --background: 0 0% 4%;
+    --foreground: 0 0% 98%;
+    --card: 0 0% 4%;
+    --card-foreground: 0 0% 98%;
+    --popover: 0 0% 4%;
+    --popover-foreground: 0 0% 98%;
+    --primary: 0 84% 60%;
+    --primary-foreground: 0 0% 98%;
+    --secondary: 24 95% 53%;
+    --secondary-foreground: 0 0% 98%;
+    --muted: 0 0% 15%;
+    --muted-foreground: 0 0% 65%;
+    --accent: 45 93% 47%;
+    --accent-foreground: 0 0% 9%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 0 0% 15%;
+    --input: 0 0% 15%;
+    --ring: 0 84% 60%;
+    --chart-1: 220 70% 50%;
+    --chart-2: 160 60% 45%;
+    --chart-3: 30 80% 55%;
+    --chart-4: 280 65% 60%;
+    --chart-5: 340 75% 55%;
+  }
+}
 
 @layer base {
   * {
-    @apply border-border; }
+    @apply border-border;
+  }
   body {
-    @apply bg-background text-foreground; } }
+    @apply bg-background text-foreground;
+  }
+}
+
+/* Custom styles for enhanced components */
+@layer components {
+  .enhanced-input {
+    @apply transition-all duration-200 focus:ring-2 focus:ring-primary focus:ring-offset-2;
+  }
+  
+  .enhanced-button {
+    @apply transition-all duration-200 hover:shadow-lg active:scale-95;
+  }
+  
+  .enhanced-card {
+    @apply transition-all duration-200 hover:shadow-lg;
+  }
+  
+  .restaurant-gradient {
+    background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 100%);
+  }
+  
+  .restaurant-gradient-text {
+    background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  
+  /* Improved contrast for text elements */
+  .text-primary {
+    @apply text-red-600;
+  }
+  
+  .text-secondary {
+    @apply text-orange-600;
+  }
+  
+  .text-accent {
+    @apply text-yellow-600;
+  }
+  
+  .text-success {
+    @apply text-green-600;
+  }
+  
+  .text-warning {
+    @apply text-amber-600;
+  }
+  
+  .text-error {
+    @apply text-red-600;
+  }
+  
+  /* Better hover states */
+  .hover\:text-primary:hover {
+    @apply text-red-700;
+  }
+  
+  .hover\:text-secondary:hover {
+    @apply text-orange-700;
+  }
+  
+  .hover\:text-accent:hover {
+    @apply text-yellow-700;
+  }
+  
+  /* Improved background colors with proper contrast */
+  .bg-primary {
+    @apply bg-red-600 text-white;
+  }
+  
+  .bg-secondary {
+    @apply bg-orange-600 text-white;
+  }
+  
+  .bg-accent {
+    @apply bg-yellow-600 text-gray-900;
+  }
+  
+  .bg-success {
+    @apply bg-green-600 text-white;
+  }
+  
+  .bg-warning {
+    @apply bg-amber-600 text-white;
+  }
+  
+  .bg-error {
+    @apply bg-red-600 text-white;
+  }
+  
+  /* Hover states for backgrounds */
+  .hover\:bg-primary:hover {
+    @apply bg-red-700;
+  }
+  
+  .hover\:bg-secondary:hover {
+    @apply bg-orange-700;
+  }
+  
+  .hover\:bg-accent:hover {
+    @apply bg-yellow-700;
+  }
+  
+  .hover\:bg-success:hover {
+    @apply bg-green-700;
+  }
+  
+  .hover\:bg-warning:hover {
+    @apply bg-amber-700;
+  }
+  
+  .hover\:bg-error:hover {
+    @apply bg-red-700;
+  }
+}
+
+/* React DatePicker custom styles */
+.react-datepicker-wrapper {
+  @apply w-full;
+}
+
+.react-datepicker__input-container {
+  @apply w-full;
+}
+
+.react-datepicker__input-container input {
+  @apply w-full h-10 px-3 py-2 text-sm border border-gray-300 rounded-lg bg-white text-gray-900 placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50;
+}
+
+.react-datepicker {
+  @apply border border-gray-300 rounded-lg shadow-lg bg-white;
+}
+
+.react-datepicker__header {
+  @apply bg-red-600 text-white rounded-t-lg;
+}
+
+.react-datepicker__current-month {
+  @apply text-white font-semibold;
+}
+
+.react-datepicker__day-name {
+  @apply text-white font-medium;
+}
+
+.react-datepicker__day {
+  @apply hover:bg-red-50 text-gray-700 hover:text-gray-900;
+}
+
+.react-datepicker__day--selected {
+  @apply bg-red-600 text-white hover:bg-red-700;
+}
+
+.react-datepicker__day--keyboard-selected {
+  @apply bg-red-50 text-gray-900;
+}
+
+.react-datepicker__day--today {
+  @apply bg-gray-100 text-gray-900 font-semibold;
+}
+
+.react-datepicker__day--disabled {
+  @apply text-gray-400 cursor-not-allowed hover:bg-transparent;
+}
+
+.react-datepicker__time-container {
+  @apply border-l border-gray-300;
+}
+
+.react-datepicker__time-list-item--selected {
+  @apply bg-red-600 text-white;
+}
+
+.react-datepicker__time-list-item:hover {
+  @apply bg-red-50 text-gray-900;
+}

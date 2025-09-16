@@ -2,101 +2,82 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import { EnhancedButton } from '@/components/ui/enhanced-button';
+import { EnhancedInput } from '@/components/ui/enhanced-input';
+import { EnhancedSelect } from '@/components/ui/enhanced-select';
+import { EnhancedDatePicker } from '@/components/ui/enhanced-datepicker';
 import { Card, CardContent } from '@/components/ui/card';
-import { Search, MapPin, Clock, Users, Utensils } from 'lucide-react';
+import {
+  Search,
+  MapPin,
+  Clock,
+  Users,
+  Utensils,
+  Star,
+  CheckCircle,
+  Zap,
+} from 'lucide-react';
+import { APP_TEXT, THEME_COLORS } from '@/lib/constants';
 
 const CUISINE_OPTIONS = [
-  'All Cuisines',
-  'Italian',
-  'Chinese',
-  'Japanese',
-  'Indian',
-  'Mexican',
-  'American',
-  'French',
-  'Thai',
-  'Mediterranean',
-  'Korean',
-  'Vietnamese',
-  'Greek',
-  'Spanish',
-  'German',
+  { value: '', label: APP_TEXT.SEARCH.ANY_CUISINE },
+  ...APP_TEXT.CUISINE_TYPES.map((cuisine) => ({
+    value: cuisine,
+    label: cuisine,
+  })),
 ];
 
-const BUDGET_OPTIONS = [
-  { value: 'all', label: 'Any Budget' },
-  { value: '$', label: '$ - Budget Friendly' },
-  { value: '$$', label: '$$ - Moderate' },
-  { value: '$$$', label: '$$$ - Expensive' },
-  { value: '$$$$', label: '$$$$ - Very Expensive' },
-];
+const BUDGET_OPTIONS = APP_TEXT.BUDGET_OPTIONS;
 
-const TIME_OPTIONS = [
-  'Any Time',
-  '6:00 AM',
-  '7:00 AM',
-  '8:00 AM',
-  '9:00 AM',
-  '10:00 AM',
-  '11:00 AM',
-  '12:00 PM',
-  '1:00 PM',
-  '2:00 PM',
-  '3:00 PM',
-  '4:00 PM',
-  '5:00 PM',
-  '6:00 PM',
-  '7:00 PM',
-  '8:00 PM',
-  '9:00 PM',
-  '10:00 PM',
-  '11:00 PM',
-];
+const TIME_OPTIONS = APP_TEXT.TIME_OPTIONS.map((time) => ({
+  value: time,
+  label: time,
+}));
 
 export default function Home() {
   const router = useRouter();
   const [searchParams, setSearchParams] = useState({
     area: '',
-    cuisine: 'All Cuisines',
+    cuisine: '',
     date: '',
-    time: 'Any Time',
+    time: '',
     people: '2',
     budget: 'all',
   });
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [isSearching, setIsSearching] = useState(false);
 
-  const handleSearch = () => {
-    const params = new URLSearchParams();
+  const handleSearch = async () => {
+    setIsSearching(true);
+    setErrors({});
 
-    if (searchParams.area) params.append('area', searchParams.area);
-    if (searchParams.cuisine && searchParams.cuisine !== 'All Cuisines') {
-      params.append('cuisine', searchParams.cuisine);
+    try {
+      const params = new URLSearchParams();
+
+      // Add parameters only if they have meaningful values
+      if (searchParams.area?.trim())
+        params.append('area', searchParams.area.trim());
+      if (searchParams.cuisine?.trim())
+        params.append('cuisine', searchParams.cuisine.trim());
+      if (searchParams.date) params.append('date', searchParams.date);
+      if (searchParams.time && searchParams.time !== 'Any Time')
+        params.append('time', searchParams.time);
+      if (searchParams.people && searchParams.people !== '2')
+        params.append('people', searchParams.people);
+      if (searchParams.budget && searchParams.budget !== 'all') {
+        // URL encode the budget parameter to handle $ characters
+        params.append('budget', encodeURIComponent(searchParams.budget));
+      }
+
+      const queryString = params.toString();
+      router.push(`/restaurants${queryString ? `?${queryString}` : ''}`);
+    } catch (error) {
+      setErrors({
+        general: 'An error occurred while searching. Please try again.',
+      });
+    } finally {
+      setIsSearching(false);
     }
-    if (searchParams.date) params.append('date', searchParams.date);
-    if (searchParams.time && searchParams.time !== 'Any Time') {
-      params.append('time', searchParams.time);
-    }
-    if (searchParams.people) params.append('people', searchParams.people);
-    if (searchParams.budget && searchParams.budget !== 'all') {
-      params.append('budget', searchParams.budget);
-    }
-
-    const queryString = params.toString();
-    router.push(`/restaurants${queryString ? `?${queryString}` : ''}`);
-  };
-
-  const getTodayDate = () => {
-    const today = new Date();
-    return today.toISOString().split('T')[0];
   };
 
   return (
@@ -119,12 +100,13 @@ export default function Home() {
         <div className='relative z-10 flex h-full items-center justify-center'>
           <div className='text-center text-white'>
             <h1 className='mb-4 text-5xl font-bold md:text-6xl'>
-              Find Your Perfect
-              <span className='block text-yellow-400'>Dining Experience</span>
+              {APP_TEXT.LANDING.HERO_TITLE}
+              <span className='block restaurant-gradient-text'>
+                {APP_TEXT.LANDING.HERO_SUBTITLE}
+              </span>
             </h1>
             <p className='mb-8 text-xl md:text-2xl'>
-              Discover amazing restaurants, make reservations, and enjoy great
-              food
+              {APP_TEXT.LANDING.HERO_DESCRIPTION}
             </p>
           </div>
         </div>
@@ -133,143 +115,115 @@ export default function Home() {
       {/* Search Section */}
       <div className='relative z-20 -mt-20 px-4'>
         <div className='mx-auto max-w-6xl'>
-          <Card className='shadow-2xl'>
+          <Card className='enhanced-card shadow-2xl'>
             <CardContent className='p-8'>
               <div className='mb-6 text-center'>
                 <h2 className='mb-2 text-3xl font-bold text-gray-900'>
-                  Search Restaurants
+                  {APP_TEXT.LANDING.SEARCH_TITLE}
                 </h2>
                 <p className='text-gray-600'>
-                  Find the perfect restaurant for your next meal
+                  {APP_TEXT.LANDING.SEARCH_DESCRIPTION}
                 </p>
               </div>
 
+              {errors.general && (
+                <div className='mb-4 rounded-lg bg-error/10 border border-error/20 p-3'>
+                  <p className='text-sm text-error'>{errors.general}</p>
+                </div>
+              )}
+
               <div className='grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-5'>
                 {/* Area/Location */}
-                <div className='space-y-2'>
-                  <Label htmlFor='area' className='flex items-center gap-2'>
-                    <MapPin className='h-4 w-4' />
-                    Area
-                  </Label>
-                  <Input
-                    id='area'
-                    placeholder='Enter area or city'
-                    value={searchParams.area}
-                    onChange={(e) =>
-                      setSearchParams((prev) => ({
-                        ...prev,
-                        area: e.target.value,
-                      }))
-                    }
-                  />
-                </div>
+                <EnhancedInput
+                  label={APP_TEXT.SEARCH.AREA}
+                  placeholder={APP_TEXT.SEARCH.AREA_PLACEHOLDER}
+                  value={searchParams.area}
+                  onChange={(e) =>
+                    setSearchParams((prev) => ({
+                      ...prev,
+                      area: e.target.value,
+                    }))
+                  }
+                  leftIcon={<MapPin className='h-4 w-4' />}
+                  error={errors.area}
+                />
 
-                {/* Cuisine Type */}
-                <div className='space-y-2'>
-                  <Label htmlFor='cuisine' className='flex items-center gap-2'>
-                    <Utensils className='h-4 w-4' />
-                    Cuisine
-                  </Label>
-                  <Select
-                    value={searchParams.cuisine}
-                    onValueChange={(value) =>
-                      setSearchParams((prev) => ({ ...prev, cuisine: value }))
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder='Select cuisine' />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {CUISINE_OPTIONS.map((cuisine) => (
-                        <SelectItem key={cuisine} value={cuisine}>
-                          {cuisine}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+                {/* Cuisine Type - Now a text input */}
+                <EnhancedInput
+                  label={APP_TEXT.SEARCH.CUISINE}
+                  placeholder={APP_TEXT.SEARCH.CUISINE_PLACEHOLDER}
+                  value={searchParams.cuisine}
+                  onChange={(e) =>
+                    setSearchParams((prev) => ({
+                      ...prev,
+                      cuisine: e.target.value,
+                    }))
+                  }
+                  leftIcon={<Utensils className='h-4 w-4' />}
+                  error={errors.cuisine}
+                />
 
                 {/* Date */}
-                <div className='space-y-2'>
-                  <Label htmlFor='date' className='flex items-center gap-2'>
-                    <Clock className='h-4 w-4' />
-                    Date
-                  </Label>
-                  <Input
-                    id='date'
-                    type='date'
-                    min={getTodayDate()}
-                    value={searchParams.date}
-                    onChange={(e) =>
-                      setSearchParams((prev) => ({
-                        ...prev,
-                        date: e.target.value,
-                      }))
-                    }
-                  />
-                </div>
+                <EnhancedDatePicker
+                  label={APP_TEXT.SEARCH.DATE}
+                  placeholder={APP_TEXT.SEARCH.DATE_PLACEHOLDER}
+                  value={searchParams.date ? new Date(searchParams.date) : null}
+                  onChange={(date) =>
+                    setSearchParams((prev) => ({
+                      ...prev,
+                      date: date ? date.toISOString().split('T')[0] : '',
+                    }))
+                  }
+                  minDate={new Date()}
+                  error={errors.date}
+                />
 
                 {/* Time */}
-                <div className='space-y-2'>
-                  <Label htmlFor='time' className='flex items-center gap-2'>
-                    <Clock className='h-4 w-4' />
-                    Time
-                  </Label>
-                  <Select
-                    value={searchParams.time}
-                    onValueChange={(value) =>
-                      setSearchParams((prev) => ({ ...prev, time: value }))
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder='Select time' />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {TIME_OPTIONS.map((time) => (
-                        <SelectItem key={time} value={time}>
-                          {time}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+                <EnhancedSelect
+                  label={APP_TEXT.SEARCH.TIME}
+                  placeholder={APP_TEXT.SEARCH.TIME_PLACEHOLDER}
+                  value={searchParams.time}
+                  onChange={(e) =>
+                    setSearchParams((prev) => ({
+                      ...prev,
+                      time: e.target.value,
+                    }))
+                  }
+                  options={TIME_OPTIONS}
+                  leftIcon={<Clock className='h-4 w-4' />}
+                  error={errors.time}
+                />
 
                 {/* Number of People */}
-                <div className='space-y-2'>
-                  <Label htmlFor='people' className='flex items-center gap-2'>
-                    <Users className='h-4 w-4' />
-                    People
-                  </Label>
-                  <Select
-                    value={searchParams.people}
-                    onValueChange={(value) =>
-                      setSearchParams((prev) => ({ ...prev, people: value }))
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder='Guests' />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {Array.from({ length: 20 }, (_, i) => i + 1).map(
-                        (num) => (
-                          <SelectItem key={num} value={num.toString()}>
-                            {num} {num === 1 ? 'Guest' : 'Guests'}
-                          </SelectItem>
-                        )
-                      )}
-                    </SelectContent>
-                  </Select>
-                </div>
+                <EnhancedSelect
+                  label={APP_TEXT.SEARCH.PEOPLE}
+                  placeholder={APP_TEXT.SEARCH.PEOPLE_PLACEHOLDER}
+                  value={searchParams.people}
+                  onChange={(e) =>
+                    setSearchParams((prev) => ({
+                      ...prev,
+                      people: e.target.value,
+                    }))
+                  }
+                  options={Array.from({ length: 20 }, (_, i) => ({
+                    value: (i + 1).toString(),
+                    label: `${i + 1} ${
+                      i === 0 ? APP_TEXT.COMMON.GUEST : APP_TEXT.COMMON.GUESTS
+                    }`,
+                  }))}
+                  leftIcon={<Users className='h-4 w-4' />}
+                  error={errors.people}
+                />
               </div>
 
               {/* Budget Filter */}
-              <div className='mt-4'>
-                <Label className='mb-2 block text-sm font-medium text-gray-700'>
-                  Budget Range
-                </Label>
+              <div className='mt-6'>
+                <label className='mb-3 block text-sm font-medium text-gray-700'>
+                  {APP_TEXT.SEARCH.BUDGET}
+                </label>
                 <div className='flex flex-wrap gap-2'>
                   {BUDGET_OPTIONS.map((option) => (
-                    <Button
+                    <EnhancedButton
                       key={option.value}
                       variant={
                         searchParams.budget === option.value
@@ -285,21 +239,22 @@ export default function Home() {
                       }
                     >
                       {option.label}
-                    </Button>
+                    </EnhancedButton>
                   ))}
                 </div>
               </div>
 
               {/* Search Button */}
               <div className='mt-6 text-center'>
-                <Button
+                <EnhancedButton
                   onClick={handleSearch}
                   size='lg'
-                  className='px-12 py-3 text-lg'
+                  loading={isSearching}
+                  leftIcon={<Search className='h-5 w-5' />}
+                  className='px-8 py-3 text-lg'
                 >
-                  <Search className='mr-2 h-5 w-5' />
-                  Search Restaurants
-                </Button>
+                  {APP_TEXT.SEARCH.SEARCH_BUTTON}
+                </EnhancedButton>
               </div>
             </CardContent>
           </Card>
@@ -307,57 +262,85 @@ export default function Home() {
       </div>
 
       {/* Features Section */}
-      <div className='py-16 bg-gray-50'>
+      <div className='py-16 bg-neutral-50'>
         <div className='mx-auto max-w-6xl px-4'>
           <div className='text-center mb-12'>
             <h2 className='text-3xl font-bold text-gray-900 mb-4'>
-              Why Choose RestoSaaS?
+              {APP_TEXT.LANDING.FEATURES_TITLE}
             </h2>
-            <p className='text-xl text-gray-600'>
-              The best platform for discovering and booking restaurants
+            <p className='text-lg text-gray-600'>
+              {APP_TEXT.LANDING.FEATURES_DESCRIPTION}
             </p>
           </div>
 
           <div className='grid grid-cols-1 md:grid-cols-3 gap-8'>
-            <div className='text-center'>
-              <div className='mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-blue-100'>
-                <Search className='h-8 w-8 text-blue-600' />
-              </div>
-              <h3 className='mb-2 text-xl font-semibold text-gray-900'>
-                Easy Search
-              </h3>
-              <p className='text-gray-600'>
-                Find restaurants by location, cuisine, and preferences with our
-                advanced search
-              </p>
-            </div>
+            {/* Feature 1 */}
+            <Card className='enhanced-card text-center p-6'>
+              <CardContent className='p-0'>
+                <div className='w-16 h-16 mx-auto mb-4 bg-primary/10 rounded-full flex items-center justify-center'>
+                  <Search className='h-8 w-8 text-primary' />
+                </div>
+                <h3 className='text-xl font-semibold text-gray-900 mb-2'>
+                  {APP_TEXT.LANDING.FEATURE_1_TITLE}
+                </h3>
+                <p className='text-gray-600'>
+                  {APP_TEXT.LANDING.FEATURE_1_DESCRIPTION}
+                </p>
+              </CardContent>
+            </Card>
 
-            <div className='text-center'>
-              <div className='mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-green-100'>
-                <Clock className='h-8 w-8 text-green-600' />
-              </div>
-              <h3 className='mb-2 text-xl font-semibold text-gray-900'>
-                Instant Reservations
-              </h3>
-              <p className='text-gray-600'>
-                Book your table instantly with real-time availability and
-                confirmation
-              </p>
-            </div>
+            {/* Feature 2 */}
+            <Card className='enhanced-card text-center p-6'>
+              <CardContent className='p-0'>
+                <div className='w-16 h-16 mx-auto mb-4 bg-secondary/10 rounded-full flex items-center justify-center'>
+                  <Zap className='h-8 w-8 text-secondary' />
+                </div>
+                <h3 className='text-xl font-semibold text-gray-900 mb-2'>
+                  {APP_TEXT.LANDING.FEATURE_2_TITLE}
+                </h3>
+                <p className='text-gray-600'>
+                  {APP_TEXT.LANDING.FEATURE_2_DESCRIPTION}
+                </p>
+              </CardContent>
+            </Card>
 
-            <div className='text-center'>
-              <div className='mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-purple-100'>
-                <Utensils className='h-8 w-8 text-purple-600' />
-              </div>
-              <h3 className='mb-2 text-xl font-semibold text-gray-900'>
-                Curated Selection
-              </h3>
-              <p className='text-gray-600'>
-                Discover handpicked restaurants with verified reviews and
-                ratings
-              </p>
-            </div>
+            {/* Feature 3 */}
+            <Card className='enhanced-card text-center p-6'>
+              <CardContent className='p-0'>
+                <div className='w-16 h-16 mx-auto mb-4 bg-accent/10 rounded-full flex items-center justify-center'>
+                  <Star className='h-8 w-8 text-accent' />
+                </div>
+                <h3 className='text-xl font-semibold text-gray-900 mb-2'>
+                  {APP_TEXT.LANDING.FEATURE_3_TITLE}
+                </h3>
+                <p className='text-gray-600'>
+                  {APP_TEXT.LANDING.FEATURE_3_DESCRIPTION}
+                </p>
+              </CardContent>
+            </Card>
           </div>
+        </div>
+      </div>
+
+      {/* CTA Section */}
+      <div className='py-16 bg-gradient-to-r from-primary to-secondary'>
+        <div className='mx-auto max-w-4xl text-center px-4'>
+          <h2 className='text-3xl font-bold text-white mb-4'>
+            Ready to Find Your Perfect Restaurant?
+          </h2>
+          <p className='text-xl text-white/90 mb-8'>
+            Join thousands of food lovers who have discovered their favorite
+            dining spots with us.
+          </p>
+          <EnhancedButton
+            onClick={() => router.push('/restaurants')}
+            size='lg'
+            variant='secondary'
+            className='px-8 py-3 text-lg'
+            leftIcon={<CheckCircle className='h-5 w-5' />}
+          >
+            Browse All Restaurants
+          </EnhancedButton>
         </div>
       </div>
     </div>

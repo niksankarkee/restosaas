@@ -142,7 +142,7 @@ function OwnerDashboardContent() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <RestaurantForm onSuccess={handleRestaurantCreated} />
+              <EnhancedRestaurantForm onSuccess={handleRestaurantCreated} />
             </CardContent>
           </Card>
         ) : (

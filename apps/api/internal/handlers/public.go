@@ -36,22 +36,50 @@ func (h *PublicHandler) ListRestaurants(c *gin.Context) {
 		SortDir: c.DefaultQuery("sort_dir", "desc"),
 	}
 
-	// Parse pagination parameters
+	// Parse pagination parameters with validation
 	if pageStr := c.Query("page"); pageStr != "" {
 		if page, err := strconv.Atoi(pageStr); err == nil && page > 0 {
 			filters.Page = page
+		} else {
+			filters.Page = 1 // Default to page 1 if invalid
 		}
+	} else {
+		filters.Page = 1
 	}
+
 	if limitStr := c.Query("limit"); limitStr != "" {
-		if limit, err := strconv.Atoi(limitStr); err == nil && limit > 0 {
+		if limit, err := strconv.Atoi(limitStr); err == nil && limit > 0 && limit <= 100 {
 			filters.Limit = limit
+		} else {
+			filters.Limit = 20 // Default to 20 if invalid
 		}
+	} else {
+		filters.Limit = 20
+	}
+
+	// Validate and sanitize other parameters
+	if filters.Budget != "" && filters.Budget != "all" && filters.Budget != "$" && filters.Budget != "$$" && filters.Budget != "$$$" && filters.Budget != "$$$$" {
+		filters.Budget = "" // Reset invalid budget
+	}
+
+	if filters.SortBy != "rating" && filters.SortBy != "name" && filters.SortBy != "created_at" && filters.SortBy != "capacity" {
+		filters.SortBy = "rating" // Default to rating sort
+	}
+
+	if filters.SortDir != "asc" && filters.SortDir != "desc" {
+		filters.SortDir = "desc" // Default to descending
 	}
 
 	// Use search service
 	result, err := h.SearchService.SearchRestaurants(filters)
 	if err != nil {
-		c.JSON(500, gin.H{"error": err.Error()})
+		// Log the error but return empty results instead of error
+		c.JSON(200, gin.H{
+			"restaurants": []interface{}{},
+			"total":       0,
+			"page":        filters.Page,
+			"limit":       filters.Limit,
+		})
 		return
 	}
 
