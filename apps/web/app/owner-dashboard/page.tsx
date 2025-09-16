@@ -17,7 +17,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import { RestaurantForm } from '@/components/forms/restaurant-form';
+import { EnhancedRestaurantForm } from '@/components/forms/enhanced-restaurant-form';
 import { api } from '@/lib/api';
 import Link from 'next/link';
 
@@ -96,16 +96,18 @@ function OwnerDashboardContent() {
               <DialogTrigger asChild>
                 <Button variant='outline'>Edit Restaurant</Button>
               </DialogTrigger>
-              <DialogContent>
+              <DialogContent className='max-w-4xl max-h-[90vh] overflow-y-auto'>
                 <DialogHeader>
                   <DialogTitle>Edit Restaurant</DialogTitle>
                 </DialogHeader>
-                <RestaurantForm
-                  initialData={restaurant}
-                  onSuccess={handleRestaurantUpdated}
-                  onCancel={() => setIsEditDialogOpen(false)}
-                  isEdit={true}
-                />
+                <div className='max-h-[70vh] overflow-y-auto pr-2'>
+                  <EnhancedRestaurantForm
+                    initialData={restaurant}
+                    onSuccess={handleRestaurantUpdated}
+                    onCancel={() => setIsEditDialogOpen(false)}
+                    isEdit={true}
+                  />
+                </div>
               </DialogContent>
             </Dialog>
           ) : (
@@ -116,14 +118,16 @@ function OwnerDashboardContent() {
               <DialogTrigger asChild>
                 <Button>Create Restaurant</Button>
               </DialogTrigger>
-              <DialogContent>
+              <DialogContent className='max-w-4xl max-h-[90vh] overflow-y-auto'>
                 <DialogHeader>
                   <DialogTitle>Create Restaurant</DialogTitle>
                 </DialogHeader>
-                <RestaurantForm
-                  onSuccess={handleRestaurantCreated}
-                  onCancel={() => setIsCreateDialogOpen(false)}
-                />
+                <div className='max-h-[70vh] overflow-y-auto pr-2'>
+                  <EnhancedRestaurantForm
+                    onSuccess={handleRestaurantCreated}
+                    onCancel={() => setIsCreateDialogOpen(false)}
+                  />
+                </div>
               </DialogContent>
             </Dialog>
           )}

@@ -59,9 +59,11 @@ type Restaurant struct {
 	Timezone    string        `gorm:"not null;default:Asia/Kathmandu"`
 	Capacity    int           `gorm:"not null;default:30"`
 	IsOpen      bool          `gorm:"not null;default:true"` // Optional if restaurant is closed
+	MainImageID *uuid.UUID    `gorm:"type:uuid"`             // Reference to main image
 	OpenHours   []OpeningHour `gorm:"constraint:OnDelete:CASCADE"`
 	Menus       []Menu        `gorm:"constraint:OnDelete:CASCADE"`
 	Images      []Image       `gorm:"constraint:OnDelete:CASCADE"`
+	Reviews     []Review      `gorm:"constraint:OnDelete:CASCADE"`
 	CreatedAt   time.Time
 	UpdatedAt   time.Time
 }
@@ -69,9 +71,10 @@ type Restaurant struct {
 type OpeningHour struct {
 	ID           uuid.UUID `gorm:"type:uuid;default:gen_random_uuid();primaryKey"`
 	RestaurantID uuid.UUID `gorm:"type:uuid;index;not null"`
-	Weekday      int       `gorm:"not null"`
-	OpenTime     string    `gorm:"not null"`
-	CloseTime    string    `gorm:"not null"`
+	Weekday      int       `gorm:"not null"`               // 0=Sunday, 1=Monday, ..., 6=Saturday
+	OpenTime     string    `gorm:"not null"`               // Format: "09:00"
+	CloseTime    string    `gorm:"not null"`               // Format: "22:00"
+	IsClosed     bool      `gorm:"not null;default:false"` // If restaurant is closed on this day
 }
 
 type Menu struct {
@@ -95,6 +98,8 @@ type Image struct {
 	RestaurantID uuid.UUID `gorm:"type:uuid;index;not null"`
 	URL          string    `gorm:"not null"`
 	Alt          string
+	IsMain       bool `gorm:"not null;default:false"` // Main image for restaurant list
+	DisplayOrder int  `gorm:"not null;default:0"`     // Order for gallery display
 }
 
 type Customer struct {
@@ -129,10 +134,13 @@ type Review struct {
 	ID           uuid.UUID `gorm:"type:uuid;default:gen_random_uuid();primaryKey"`
 	RestaurantID uuid.UUID `gorm:"type:uuid;index;not null"`
 	CustomerID   uuid.UUID `gorm:"type:uuid;index"`
-	Rating       int       `gorm:"not null"`
-	Comment      string
-	IsApproved   bool `gorm:"not null;default:false"`
+	CustomerName string    `gorm:"type:text"` // Customer name for display
+	Rating       int       `gorm:"not null"`  // 1-5 stars
+	Title        string    `gorm:"type:text"` // Review title
+	Comment      string    `gorm:"type:text"`
+	IsApproved   bool      `gorm:"not null;default:false"`
 	CreatedAt    time.Time
+	UpdatedAt    time.Time
 }
 
 type LandingPage struct {

@@ -7,6 +7,7 @@ import * as z from 'zod';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { RichTextEditor } from '@/components/ui/rich-text-editor';
 import {
   Card,
@@ -17,7 +18,7 @@ import {
 } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Camera, Upload, X, Star } from 'lucide-react';
+import { Clock, Camera, Upload, X, Star } from 'lucide-react';
 import { api } from '@/lib/api';
 
 const restaurantSchema = z.object({
@@ -34,18 +35,32 @@ const restaurantSchema = z.object({
   isOpen: z.boolean().default(true),
 });
 
+const openingHourSchema = z.object({
+  weekday: z.number().min(0).max(6),
+  openTime: z
+    .string()
+    .regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, 'Invalid time format'),
+  closeTime: z
+    .string()
+    .regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, 'Invalid time format'),
+  isClosed: z.boolean().default(false),
+});
+
+const imageSchema = z.object({
+  url: z.string().url('Invalid URL'),
+  alt: z.string().optional(),
+  isMain: z.boolean().default(false),
+  displayOrder: z.number().default(0),
+});
+
 type RestaurantFormData = z.infer<typeof restaurantSchema>;
+type OpeningHourData = z.infer<typeof openingHourSchema>;
+type ImageData = z.infer<typeof imageSchema>;
 
-interface ImageData {
-  url: string;
-  alt: string;
-  isMain: boolean;
-  displayOrder: number;
-}
-
-interface RestaurantFormProps {
+interface EnhancedRestaurantFormProps {
   initialData?: Partial<RestaurantFormData> & {
     id?: string;
+    openHours?: OpeningHourData[];
     images?: ImageData[];
   };
   onSuccess?: (data: any) => void;
@@ -78,16 +93,35 @@ const GENRE_OPTIONS = [
   'Other',
 ];
 
-export function RestaurantForm({
+const WEEKDAYS = [
+  'Sunday',
+  'Monday',
+  'Tuesday',
+  'Wednesday',
+  'Thursday',
+  'Friday',
+  'Saturday',
+];
+
+export function EnhancedRestaurantForm({
   initialData,
   onSuccess,
   onCancel,
   isEdit = false,
-}: RestaurantFormProps) {
+}: EnhancedRestaurantFormProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [description, setDescription] = useState(
     initialData?.description || ''
+  );
+  const [openHours, setOpenHours] = useState<OpeningHourData[]>(
+    initialData?.openHours ||
+      Array.from({ length: 7 }, (_, i) => ({
+        weekday: i,
+        openTime: '09:00',
+        closeTime: '22:00',
+        isClosed: false,
+      }))
   );
   const [images, setImages] = useState<ImageData[]>(initialData?.images || []);
   const [newImageUrl, setNewImageUrl] = useState('');
@@ -114,6 +148,16 @@ export function RestaurantForm({
       isOpen: initialData?.isOpen ?? true,
     },
   });
+
+  const updateOpenHour = (
+    index: number,
+    field: keyof OpeningHourData,
+    value: any
+  ) => {
+    const updated = [...openHours];
+    updated[index] = { ...updated[index], [field]: value };
+    setOpenHours(updated);
+  };
 
   const addImage = () => {
     if (!newImageUrl.trim()) return;
@@ -164,6 +208,8 @@ export function RestaurantForm({
       const payload = {
         ...data,
         description,
+        openHours,
+        images,
       };
 
       let response;
@@ -172,6 +218,13 @@ export function RestaurantForm({
           `/owner/restaurants/${initialData.id}`,
           payload
         );
+
+        // Update opening hours separately
+        if (openHours.length > 0) {
+          await api.post(`/owner/restaurants/${initialData.id}/hours`, {
+            openHours,
+          });
+        }
 
         // Update images separately
         if (images.length > 0) {
@@ -182,11 +235,18 @@ export function RestaurantForm({
       } else {
         response = await api.post('/owner/restaurants', payload);
 
-        // Add images for new restaurant
-        if (response.data?.id && images.length > 0) {
-          await api.post(`/owner/restaurants/${response.data.id}/images`, {
-            images,
-          });
+        // Add opening hours and images for new restaurant
+        if (response.data?.id) {
+          if (openHours.length > 0) {
+            await api.post(`/owner/restaurants/${response.data.id}/hours`, {
+              openHours,
+            });
+          }
+          if (images.length > 0) {
+            await api.post(`/owner/restaurants/${response.data.id}/images`, {
+              images,
+            });
+          }
         }
       }
 
@@ -199,7 +259,7 @@ export function RestaurantForm({
   };
 
   return (
-    <Card className='w-full max-w-4xl mx-auto'>
+    <Card className='w-full max-w-6xl mx-auto'>
       <CardHeader>
         <CardTitle>
           {isEdit ? 'Edit Restaurant' : 'Create Restaurant'}
@@ -212,13 +272,14 @@ export function RestaurantForm({
       </CardHeader>
       <CardContent>
         <Tabs defaultValue='basic' className='w-full'>
-          <TabsList className='grid w-full grid-cols-2'>
-            <TabsTrigger value='basic'>Basic Information</TabsTrigger>
-            <TabsTrigger value='images'>Images & Gallery</TabsTrigger>
+          <TabsList className='grid w-full grid-cols-3'>
+            <TabsTrigger value='basic'>Basic Info</TabsTrigger>
+            <TabsTrigger value='hours'>Opening Hours</TabsTrigger>
+            <TabsTrigger value='images'>Images</TabsTrigger>
           </TabsList>
 
-          <TabsContent value='basic' className='space-y-6'>
-            <form onSubmit={handleSubmit(onSubmit)} className='space-y-6'>
+          <form onSubmit={handleSubmit(onSubmit)} className='space-y-6'>
+            <TabsContent value='basic' className='space-y-6'>
               {/* Basic Information */}
               <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
                 <div className='space-y-2'>
@@ -388,134 +449,251 @@ export function RestaurantForm({
                   </div>
                 </div>
               </div>
+            </TabsContent>
 
-              {error && (
-                <div className='text-sm text-red-600 bg-red-50 p-3 rounded-md'>
-                  {error}
-                </div>
-              )}
-
-              <div className='flex gap-2'>
-                <Button type='submit' disabled={isLoading} className='flex-1'>
-                  {isLoading
-                    ? isEdit
-                      ? 'Updating...'
-                      : 'Creating...'
-                    : isEdit
-                    ? 'Update Restaurant'
-                    : 'Create Restaurant'}
-                </Button>
-                {onCancel && (
-                  <Button type='button' variant='outline' onClick={onCancel}>
-                    Cancel
-                  </Button>
-                )}
-              </div>
-            </form>
-          </TabsContent>
-
-          <TabsContent value='images' className='space-y-6'>
-            <div className='space-y-4'>
-              <div className='flex items-center space-x-2'>
-                <Camera className='h-5 w-5' />
-                <h3 className='text-lg font-semibold'>Restaurant Images</h3>
-              </div>
-              <p className='text-sm text-gray-600'>
-                Add images of your restaurant by entering image URLs. The first
-                image will be used as the main image.
-              </p>
-
-              {/* Add Image URL */}
+            <TabsContent value='hours' className='space-y-6'>
               <div className='space-y-4'>
-                <div className='flex space-x-2'>
-                  <Input
-                    type='url'
-                    placeholder='Enter image URL (e.g., https://example.com/image.jpg)'
-                    value={newImageUrl}
-                    onChange={(e) => setNewImageUrl(e.target.value)}
-                    className='flex-1'
-                  />
-                  <Button
-                    type='button'
-                    onClick={addImage}
-                    disabled={!newImageUrl.trim()}
-                  >
-                    <Upload className='h-4 w-4 mr-2' />
-                    Add Image
-                  </Button>
+                <div className='flex items-center space-x-2'>
+                  <Clock className='h-5 w-5' />
+                  <h3 className='text-lg font-semibold'>Opening Hours</h3>
+                </div>
+                <p className='text-sm text-gray-600'>
+                  Set your restaurant's opening hours for each day of the week.
+                </p>
+
+                {/* Opening Hours Preview */}
+                <div className='bg-blue-50 p-4 rounded-lg'>
+                  <h4 className='text-sm font-semibold text-blue-900 mb-2'>
+                    Opening Hours Preview
+                  </h4>
+                  <div className='space-y-1'>
+                    {openHours.map((hour) => (
+                      <div
+                        key={hour.weekday}
+                        className='flex justify-between text-sm'
+                      >
+                        <span className='font-medium'>
+                          {WEEKDAYS[hour.weekday]}:
+                        </span>
+                        <span
+                          className={
+                            hour.isClosed ? 'text-red-600' : 'text-gray-700'
+                          }
+                        >
+                          {hour.isClosed
+                            ? 'Closed'
+                            : `${hour.openTime} - ${hour.closeTime}`}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
 
-                {/* Image URL Help */}
-                <div className='bg-blue-50 p-3 rounded-lg'>
-                  <p className='text-sm text-blue-800'>
-                    <strong>Tip:</strong> You can use image hosting services
-                    like:
-                  </p>
-                  <ul className='text-sm text-blue-700 mt-1 ml-4 list-disc'>
-                    <li>Imgur, Cloudinary, or AWS S3</li>
-                    <li>
-                      Make sure the URL ends with .jpg, .jpeg, .png, or .webp
-                    </li>
-                    <li>Use high-quality images (at least 800x600 pixels)</li>
-                  </ul>
-                </div>
-              </div>
-
-              {/* Image Gallery */}
-              {images.length > 0 && (
-                <div className='grid grid-cols-2 md:grid-cols-3 gap-4'>
-                  {images.map((image, index) => (
-                    <div key={index} className='relative group'>
-                      <div className='aspect-square rounded-lg overflow-hidden border-2 border-gray-200'>
-                        <img
-                          src={image.url}
-                          alt={image.alt}
-                          className='w-full h-full object-cover'
-                        />
+                <div className='space-y-4'>
+                  {openHours.map((hour, index) => (
+                    <div
+                      key={hour.weekday}
+                      className='grid grid-cols-1 md:grid-cols-4 gap-4 p-4 border rounded-lg bg-gray-50'
+                    >
+                      {/* Day Name */}
+                      <div className='flex items-center'>
+                        <Label className='text-sm font-semibold text-gray-900'>
+                          {WEEKDAYS[hour.weekday]}
+                        </Label>
                       </div>
 
-                      {image.isMain && (
-                        <Badge className='absolute top-2 left-2 bg-yellow-500 hover:bg-yellow-600'>
-                          <Star className='h-3 w-3 mr-1' />
-                          Main
-                        </Badge>
+                      {/* Closed Checkbox */}
+                      <div className='flex items-center space-x-2'>
+                        <input
+                          type='checkbox'
+                          id={`closed-${hour.weekday}`}
+                          checked={hour.isClosed}
+                          onChange={(e) =>
+                            updateOpenHour(index, 'isClosed', e.target.checked)
+                          }
+                          className='rounded border-gray-300'
+                        />
+                        <Label
+                          htmlFor={`closed-${hour.weekday}`}
+                          className='text-sm'
+                        >
+                          Closed on this day
+                        </Label>
+                      </div>
+
+                      {/* Open Time */}
+                      {!hour.isClosed && (
+                        <>
+                          <div className='space-y-1'>
+                            <Label className='text-xs text-gray-600'>
+                              Open Time
+                            </Label>
+                            <Input
+                              type='time'
+                              value={hour.openTime}
+                              onChange={(e) =>
+                                updateOpenHour(
+                                  index,
+                                  'openTime',
+                                  e.target.value
+                                )
+                              }
+                              className='w-full'
+                            />
+                          </div>
+                          <div className='space-y-1'>
+                            <Label className='text-xs text-gray-600'>
+                              Close Time
+                            </Label>
+                            <Input
+                              type='time'
+                              value={hour.closeTime}
+                              onChange={(e) =>
+                                updateOpenHour(
+                                  index,
+                                  'closeTime',
+                                  e.target.value
+                                )
+                              }
+                              className='w-full'
+                            />
+                          </div>
+                        </>
                       )}
 
-                      <div className='absolute top-2 right-2 flex space-x-1'>
-                        {!image.isMain && (
-                          <Button
-                            type='button'
-                            size='sm'
-                            variant='secondary'
-                            onClick={() => setMainImage(index)}
-                            className='h-6 w-6 p-0'
-                          >
-                            <Star className='h-3 w-3' />
-                          </Button>
-                        )}
-                        <Button
-                          type='button'
-                          size='sm'
-                          variant='destructive'
-                          onClick={() => removeImage(index)}
-                          className='h-6 w-6 p-0'
-                        >
-                          <X className='h-3 w-3' />
-                        </Button>
-                      </div>
+                      {/* Show closed message when closed */}
+                      {hour.isClosed && (
+                        <div className='md:col-span-2 flex items-center'>
+                          <span className='text-sm text-red-600 font-medium'>
+                            Restaurant is closed on {WEEKDAYS[hour.weekday]}
+                          </span>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
-              )}
+              </div>
+            </TabsContent>
 
-              {images.length === 0 && (
-                <div className='text-center py-8 text-gray-500'>
-                  <Camera className='h-12 w-12 mx-auto mb-4 text-gray-300' />
-                  <p>No images added yet. Add your first image above!</p>
+            <TabsContent value='images' className='space-y-6'>
+              <div className='space-y-4'>
+                <div className='flex items-center space-x-2'>
+                  <Camera className='h-5 w-5' />
+                  <h3 className='text-lg font-semibold'>Restaurant Images</h3>
                 </div>
+                <p className='text-sm text-gray-600'>
+                  Add images of your restaurant by entering image URLs. The
+                  first image will be used as the main image.
+                </p>
+
+                {/* Add Image URL */}
+                <div className='space-y-4'>
+                  <div className='flex space-x-2'>
+                    <Input
+                      type='url'
+                      placeholder='Enter image URL (e.g., https://example.com/image.jpg)'
+                      value={newImageUrl}
+                      onChange={(e) => setNewImageUrl(e.target.value)}
+                      className='flex-1'
+                    />
+                    <Button
+                      type='button'
+                      onClick={addImage}
+                      disabled={!newImageUrl.trim()}
+                    >
+                      <Upload className='h-4 w-4 mr-2' />
+                      Add Image
+                    </Button>
+                  </div>
+
+                  {/* Image URL Help */}
+                  <div className='bg-blue-50 p-3 rounded-lg'>
+                    <p className='text-sm text-blue-800'>
+                      <strong>Tip:</strong> You can use image hosting services
+                      like:
+                    </p>
+                    <ul className='text-sm text-blue-700 mt-1 ml-4 list-disc'>
+                      <li>Imgur, Cloudinary, or AWS S3</li>
+                      <li>
+                        Make sure the URL ends with .jpg, .jpeg, .png, or .webp
+                      </li>
+                      <li>Use high-quality images (at least 800x600 pixels)</li>
+                    </ul>
+                  </div>
+                </div>
+
+                {/* Image Gallery */}
+                {images.length > 0 && (
+                  <div className='grid grid-cols-2 md:grid-cols-3 gap-4'>
+                    {images.map((image, index) => (
+                      <div key={index} className='relative group'>
+                        <div className='aspect-square rounded-lg overflow-hidden bg-gray-100'>
+                          <img
+                            src={image.url}
+                            alt={image.alt || `Restaurant image ${index + 1}`}
+                            className='w-full h-full object-cover'
+                          />
+                        </div>
+
+                        {image.isMain && (
+                          <Badge className='absolute top-2 left-2 bg-yellow-500 hover:bg-yellow-600'>
+                            <Star className='h-3 w-3 mr-1' />
+                            Main
+                          </Badge>
+                        )}
+
+                        <div className='absolute top-2 right-2 flex space-x-1'>
+                          {!image.isMain && (
+                            <Button
+                              type='button'
+                              size='sm'
+                              variant='secondary'
+                              onClick={() => setMainImage(index)}
+                              className='h-8 w-8 p-0'
+                            >
+                              <Star className='h-3 w-3' />
+                            </Button>
+                          )}
+                          <Button
+                            type='button'
+                            size='sm'
+                            variant='destructive'
+                            onClick={() => removeImage(index)}
+                            className='h-8 w-8 p-0'
+                          >
+                            <X className='h-3 w-3' />
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </TabsContent>
+
+            {error && (
+              <div className='text-sm text-red-600 bg-red-50 p-3 rounded-md'>
+                {error}
+              </div>
+            )}
+
+            <div className='flex gap-2 pt-6 border-t'>
+              <Button type='submit' disabled={isLoading} className='flex-1'>
+                {isLoading
+                  ? isEdit
+                    ? 'Updating...'
+                    : 'Creating...'
+                  : isEdit
+                  ? 'Update Restaurant'
+                  : 'Create Restaurant'}
+              </Button>
+              {onCancel && (
+                <Button type='button' variant='outline' onClick={onCancel}>
+                  Cancel
+                </Button>
               )}
             </div>
-          </TabsContent>
+          </form>
         </Tabs>
       </CardContent>
     </Card>

@@ -32,6 +32,8 @@ func Mount(r *gin.Engine, gdb *gorm.DB) {
 		// Public routes (no auth required, but tokens added if user is authenticated)
 		api.GET("/restaurants", pub.ListRestaurants)
 		api.GET("/restaurants/:slug", pub.GetRestaurant)
+		api.GET("/restaurants/:slug/menus", pub.GetRestaurantMenus)
+		api.GET("/restaurants/:slug/reviews", restaurant.GetRestaurantReviews)
 		api.GET("/restaurants/:slug/slots", pub.GetSlots)
 		api.POST("/reservations", pub.CreateReservation)
 		api.POST("/reviews", pub.CreateReview)
@@ -78,11 +80,14 @@ func Mount(r *gin.Engine, gdb *gorm.DB) {
 	superAdminGroup := r.Group("/api/super-admin")
 	superAdminGroup.Use(auth.RequireAuth(string(db.RoleSuper)), auth.AddTokenToResponse())
 	{
-		superAdminGroup.POST("/owners", superAdmin.CreateOwner)     // Create owner
-		superAdminGroup.GET("/owners", superAdmin.ListOwners)       // List all owners
-		superAdminGroup.GET("/users", superAdmin.ListAllUsers)      // List all users
-		superAdminGroup.PUT("/users/:id", superAdmin.UpdateUser)    // Update user
-		superAdminGroup.DELETE("/users/:id", superAdmin.DeleteUser) // Delete user
+		superAdminGroup.POST("/owners", superAdmin.CreateOwner)               // Create owner
+		superAdminGroup.GET("/owners", superAdmin.ListOwners)                 // List all owners
+		superAdminGroup.GET("/users", superAdmin.ListAllUsers)                // List all users
+		superAdminGroup.PUT("/users/:id", superAdmin.UpdateUser)              // Update user
+		superAdminGroup.DELETE("/users/:id", superAdmin.DeleteUser)           // Delete user
+		superAdminGroup.GET("/restaurants", restaurant.ListAllRestaurants)    // List all restaurants
+		superAdminGroup.GET("/restaurants/:id", restaurant.GetRestaurantByID) // Get restaurant by ID
+		superAdminGroup.PUT("/restaurants/:id", restaurant.UpdateRestaurant)  // Update restaurant
 	}
 
 	// Organization management routes (OWNER only)
@@ -98,7 +103,8 @@ func Mount(r *gin.Engine, gdb *gorm.DB) {
 	superAdminOrgGroup := r.Group("/api/super-admin/organizations")
 	superAdminOrgGroup.Use(auth.RequireAuth(string(db.RoleSuper)), auth.AddTokenToResponse())
 	{
-		superAdminOrgGroup.GET("", organization.ListOrganizations) // List all organizations
+		superAdminOrgGroup.GET("", organization.ListOrganizations)    // List all organizations
+		superAdminOrgGroup.PUT("/:id", superAdmin.UpdateOrganization) // Update organization
 	}
 
 	// Restaurant management routes (OWNER only)
@@ -112,5 +118,7 @@ func Mount(r *gin.Engine, gdb *gorm.DB) {
 		restaurantGroup.GET("/:id/menus", restaurant.GetMenus)                      // Get menus
 		restaurantGroup.POST("/:id/menus", restaurant.CreateMenu)                   // Create menu
 		restaurantGroup.POST("/:id/menus/:menuId/courses", restaurant.CreateCourse) // Create course
+		restaurantGroup.POST("/:id/hours", restaurant.SetOpeningHours)              // Set opening hours
+		restaurantGroup.POST("/:id/images", restaurant.UploadImages)                // Upload images
 	}
 }

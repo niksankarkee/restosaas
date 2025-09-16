@@ -357,3 +357,50 @@ func (h *SuperAdminHandler) DeleteUser(c *gin.Context) {
 
 	c.Status(204)
 }
+
+// PUT /api/super-admin/organizations/:id - Update organization (SUPER_ADMIN only)
+func (h *SuperAdminHandler) UpdateOrganization(c *gin.Context) {
+	id := c.Param("id")
+	orgID, err := uuid.Parse(id)
+	if err != nil {
+		c.JSON(400, gin.H{"error": "invalid organization ID"})
+		return
+	}
+
+	var req struct {
+		Name *string `json:"name,omitempty"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(400, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Check if organization exists
+	var org db.Organization
+	if err := h.DB.Where("id = ?", orgID).First(&org).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			c.JSON(404, gin.H{"error": "organization not found"})
+			return
+		}
+		c.JSON(500, gin.H{"error": "failed to fetch organization"})
+		return
+	}
+
+	// Update fields
+	if req.Name != nil {
+		org.Name = *req.Name
+	}
+
+	if err := h.DB.Save(&org).Error; err != nil {
+		c.JSON(500, gin.H{"error": "failed to update organization"})
+		return
+	}
+
+	response := gin.H{
+		"id":   org.ID.String(),
+		"name": org.Name,
+	}
+
+	c.JSON(200, response)
+}

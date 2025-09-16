@@ -6,6 +6,7 @@ import (
 	"github.com/example/restosaas/apps/api/internal/db"
 	"github.com/example/restosaas/apps/api/internal/services"
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
@@ -32,7 +33,52 @@ func (h *PublicHandler) GetRestaurant(c *gin.Context) {
 		c.Status(404)
 		return
 	}
-	c.JSON(200, r)
+
+	// Get approved reviews for average rating
+	var reviews []db.Review
+	h.DB.Where("restaurant_id = ? AND is_approved = ?", r.ID, true).Find(&reviews)
+
+	// Calculate average rating
+	var totalRating int
+	var reviewCount int
+	for _, review := range reviews {
+		totalRating += review.Rating
+		reviewCount++
+	}
+
+	avgRating := 0.0
+	if reviewCount > 0 {
+		avgRating = float64(totalRating) / float64(reviewCount)
+	}
+
+	// Create response with additional fields
+	response := gin.H{
+		"ID":          r.ID,
+		"Slug":        r.Slug,
+		"Name":        r.Name,
+		"Slogan":      r.Slogan,
+		"Place":       r.Place,
+		"Genre":       r.Genre,
+		"Budget":      r.Budget,
+		"Title":       r.Title,
+		"Description": r.Description,
+		"Area":        r.Area,
+		"Address":     r.Address,
+		"Phone":       r.Phone,
+		"Timezone":    r.Timezone,
+		"Capacity":    r.Capacity,
+		"IsOpen":      r.IsOpen,
+		"OpenHours":   r.OpenHours,
+		"Menus":       r.Menus,
+		"Images":      r.Images,
+		"MainImageID": r.MainImageID,
+		"AvgRating":   avgRating,
+		"ReviewCount": reviewCount,
+		"CreatedAt":   r.CreatedAt,
+		"UpdatedAt":   r.UpdatedAt,
+	}
+
+	c.JSON(200, response)
 }
 
 func (h *PublicHandler) GetSlots(c *gin.Context) {
@@ -105,7 +151,9 @@ func (h *PublicHandler) CreateReview(c *gin.Context) {
 	type Req struct {
 		RestaurantSlug string `json:"restaurantSlug"`
 		CustomerID     string `json:"customerId"`
+		CustomerName   string `json:"customerName"`
 		Rating         int    `json:"rating"`
+		Title          string `json:"title"`
 		Comment        string `json:"comment"`
 	}
 	var req Req
@@ -118,10 +166,91 @@ func (h *PublicHandler) CreateReview(c *gin.Context) {
 		c.Status(404)
 		return
 	}
-	rev := db.Review{RestaurantID: resto.ID, Rating: req.Rating, Comment: req.Comment}
+
+	// Parse customer ID if provided
+	var customerUUID uuid.UUID
+	if req.CustomerID != "" {
+		if parsed, err := uuid.Parse(req.CustomerID); err == nil {
+			customerUUID = parsed
+		}
+	}
+
+	rev := db.Review{
+		RestaurantID: resto.ID,
+		CustomerID:   customerUUID,
+		CustomerName: req.CustomerName,
+		Rating:       req.Rating,
+		Title:        req.Title,
+		Comment:      req.Comment,
+		IsApproved:   false, // Reviews need approval
+	}
 	if err := h.DB.Create(&rev).Error; err != nil {
 		c.JSON(500, gin.H{"error": err.Error()})
 		return
 	}
 	c.JSON(201, rev)
+}
+
+func (h *PublicHandler) GetRestaurantMenus(c *gin.Context) {
+	slug := c.Param("slug")
+	var r db.Restaurant
+	if err := h.DB.Where("slug = ?", slug).Preload("Menus.Courses").First(&r).Error; err != nil {
+		c.Status(404)
+		return
+	}
+
+	// Convert to response format
+	var menus []struct {
+		ID          string `json:"id"`
+		Title       string `json:"title"`
+		Description string `json:"description"`
+		Courses     []struct {
+			ID       string `json:"id"`
+			Name     string `json:"name"`
+			Price    int    `json:"price"`
+			ImageURL string `json:"imageUrl"`
+		} `json:"courses"`
+	}
+
+	for _, menu := range r.Menus {
+		var courses []struct {
+			ID       string `json:"id"`
+			Name     string `json:"name"`
+			Price    int    `json:"price"`
+			ImageURL string `json:"imageUrl"`
+		}
+
+		for _, course := range menu.Courses {
+			courses = append(courses, struct {
+				ID       string `json:"id"`
+				Name     string `json:"name"`
+				Price    int    `json:"price"`
+				ImageURL string `json:"imageUrl"`
+			}{
+				ID:       course.ID.String(),
+				Name:     course.Name,
+				Price:    course.Price,
+				ImageURL: course.ImageURL,
+			})
+		}
+
+		menus = append(menus, struct {
+			ID          string `json:"id"`
+			Title       string `json:"title"`
+			Description string `json:"description"`
+			Courses     []struct {
+				ID       string `json:"id"`
+				Name     string `json:"name"`
+				Price    int    `json:"price"`
+				ImageURL string `json:"imageUrl"`
+			} `json:"courses"`
+		}{
+			ID:          menu.ID.String(),
+			Title:       menu.Title,
+			Description: menu.Description,
+			Courses:     courses,
+		})
+	}
+
+	c.JSON(200, menus)
 }

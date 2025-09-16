@@ -57,9 +57,12 @@ function MenusPageContent() {
       const response = await api.get(
         `/owner/restaurants/${restaurantId}/menus`
       );
-      setMenus(response.data);
+      // Ensure menus is always an array
+      setMenus(Array.isArray(response.data) ? response.data : []);
     } catch (error) {
       console.error('Failed to fetch menus:', error);
+      // Set to empty array on error to prevent null reference
+      setMenus([]);
     } finally {
       setIsLoading(false);
     }
@@ -74,7 +77,7 @@ function MenusPageContent() {
         `/owner/restaurants/${restaurantId}/menus`,
         data
       );
-      setMenus((prev) => [...prev, response.data]);
+      setMenus((prev) => [...(prev || []), response.data]);
       setIsCreateDialogOpen(false);
     } catch (error) {
       console.error('Failed to create menu:', error);
@@ -93,9 +96,9 @@ function MenusPageContent() {
 
       // Update the specific menu with the new course
       setMenus((prevMenus) =>
-        prevMenus.map((menu) =>
+        (prevMenus || []).map((menu) =>
           menu.id === selectedMenuId
-            ? { ...menu, courses: [...menu.courses, response.data] }
+            ? { ...menu, courses: [...(menu.courses || []), response.data] }
             : menu
         )
       );
@@ -150,7 +153,7 @@ function MenusPageContent() {
           </Dialog>
         </div>
 
-        {menus.length === 0 ? (
+        {!menus || menus.length === 0 ? (
           <Card>
             <CardContent className='text-center py-12'>
               <h3 className='text-lg font-semibold text-gray-900 mb-2'>
@@ -166,74 +169,77 @@ function MenusPageContent() {
           </Card>
         ) : (
           <div className='grid gap-6'>
-            {menus.map((menu) => (
-              <Card key={menu.id}>
-                <CardHeader>
-                  <div className='flex justify-between items-start'>
-                    <div>
-                      <CardTitle className='text-xl'>{menu.title}</CardTitle>
-                      {menu.description && (
-                        <p className='text-gray-600 mt-1'>{menu.description}</p>
-                      )}
-                    </div>
-                    <div className='flex gap-2'>
-                      <Button
-                        variant='outline'
-                        size='sm'
-                        onClick={() => {
-                          setSelectedMenuId(menu.id);
-                          setIsCourseDialogOpen(true);
-                        }}
-                      >
-                        Add Course
-                      </Button>
-                      <Button
-                        variant='outline'
-                        size='sm'
-                        onClick={() => {
-                          setEditingMenu(menu);
-                          setIsEditDialogOpen(true);
-                        }}
-                      >
-                        Edit
-                      </Button>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  {menu.courses && menu.courses.length > 0 ? (
-                    <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4'>
-                      {menu.courses.map((course) => (
-                        <div
-                          key={course.id}
-                          className='border rounded-lg p-4 hover:shadow-md transition-shadow'
+            {menus &&
+              menus.map((menu) => (
+                <Card key={menu.id}>
+                  <CardHeader>
+                    <div className='flex justify-between items-start'>
+                      <div>
+                        <CardTitle className='text-xl'>{menu.title}</CardTitle>
+                        {menu.description && (
+                          <p className='text-gray-600 mt-1'>
+                            {menu.description}
+                          </p>
+                        )}
+                      </div>
+                      <div className='flex gap-2'>
+                        <Button
+                          variant='outline'
+                          size='sm'
+                          onClick={() => {
+                            setSelectedMenuId(menu.id);
+                            setIsCourseDialogOpen(true);
+                          }}
                         >
-                          <div className='flex justify-between items-start mb-2'>
-                            <h4 className='font-semibold text-gray-900'>
-                              {course.name}
-                            </h4>
-                            <span className='text-lg font-bold text-green-600'>
-                              ${course.price}
-                            </span>
-                          </div>
-                          {course.imageUrl && (
-                            <img
-                              src={course.imageUrl}
-                              alt={course.name}
-                              className='w-full h-32 object-cover rounded mb-2'
-                            />
-                          )}
-                        </div>
-                      ))}
+                          Add Course
+                        </Button>
+                        <Button
+                          variant='outline'
+                          size='sm'
+                          onClick={() => {
+                            setEditingMenu(menu);
+                            setIsEditDialogOpen(true);
+                          }}
+                        >
+                          Edit
+                        </Button>
+                      </div>
                     </div>
-                  ) : (
-                    <p className='text-gray-500 text-center py-4'>
-                      No courses in this menu yet.
-                    </p>
-                  )}
-                </CardContent>
-              </Card>
-            ))}
+                  </CardHeader>
+                  <CardContent>
+                    {menu.courses && menu.courses.length > 0 ? (
+                      <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4'>
+                        {menu.courses.map((course) => (
+                          <div
+                            key={course.id}
+                            className='border rounded-lg p-4 hover:shadow-md transition-shadow'
+                          >
+                            <div className='flex justify-between items-start mb-2'>
+                              <h4 className='font-semibold text-gray-900'>
+                                {course.name}
+                              </h4>
+                              <span className='text-lg font-bold text-green-600'>
+                                ${course.price}
+                              </span>
+                            </div>
+                            {course.imageUrl && (
+                              <img
+                                src={course.imageUrl}
+                                alt={course.name}
+                                className='w-full h-32 object-cover rounded mb-2'
+                              />
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className='text-gray-500 text-center py-4'>
+                        No courses in this menu yet.
+                      </p>
+                    )}
+                  </CardContent>
+                </Card>
+              ))}
           </div>
         )}
 
