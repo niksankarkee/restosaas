@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"strconv"
 	"time"
 
 	"github.com/example/restosaas/apps/api/internal/db"
@@ -10,93 +11,154 @@ import (
 	"gorm.io/gorm"
 )
 
-type PublicHandler struct{ DB *gorm.DB }
+type PublicHandler struct {
+	DB            *gorm.DB
+	SearchService *services.SearchService
+}
+
+func NewPublicHandler(db *gorm.DB) *PublicHandler {
+	return &PublicHandler{
+		DB:            db,
+		SearchService: services.NewSearchService(db),
+	}
+}
 
 func (h *PublicHandler) ListRestaurants(c *gin.Context) {
-	area := c.Query("area")
-	cuisine := c.Query("cuisine")
-	budget := c.Query("budget")
-	people := c.Query("people")
-	// Note: date and time parameters are reserved for future reservation filtering
-	_ = c.Query("date")
-	_ = c.Query("time")
-
-	q := h.DB.Model(&db.Restaurant{})
-
-	// Filter by area
-	if area != "" {
-		q = q.Where("area ILIKE ? OR place ILIKE ?", "%"+area+"%", "%"+area+"%")
+	// Parse search parameters
+	filters := services.SearchFilters{
+		Area:    c.Query("area"),
+		Cuisine: c.Query("cuisine"),
+		Budget:  c.Query("budget"),
+		People:  c.Query("people"),
+		Date:    c.Query("date"),
+		Time:    c.Query("time"),
+		SortBy:  c.DefaultQuery("sort_by", "rating"),
+		SortDir: c.DefaultQuery("sort_dir", "desc"),
 	}
 
-	// Filter by cuisine
-	if cuisine != "" {
-		q = q.Where("genre ILIKE ?", "%"+cuisine+"%")
+	// Parse pagination parameters
+	if pageStr := c.Query("page"); pageStr != "" {
+		if page, err := strconv.Atoi(pageStr); err == nil && page > 0 {
+			filters.Page = page
+		}
+	}
+	if limitStr := c.Query("limit"); limitStr != "" {
+		if limit, err := strconv.Atoi(limitStr); err == nil && limit > 0 {
+			filters.Limit = limit
+		}
 	}
 
-	// Filter by budget
-	if budget != "" && budget != "all" {
-		q = q.Where("budget = ?", budget)
-	}
-
-	// Filter by capacity (number of people)
-	if people != "" {
-		q = q.Where("capacity >= ?", people)
-	}
-
-	// Only show open restaurants
-	q = q.Where("is_open = ?", true)
-
-	var items []db.Restaurant
-	if err := q.Preload("Images").Preload("OpenHours").Limit(100).Find(&items).Error; err != nil {
+	// Use search service
+	result, err := h.SearchService.SearchRestaurants(filters)
+	if err != nil {
 		c.JSON(500, gin.H{"error": err.Error()})
 		return
 	}
 
-	// Calculate average ratings for each restaurant
-	var restaurantsWithRatings []gin.H
-	for _, restaurant := range items {
-		var reviews []db.Review
-		h.DB.Where("restaurant_id = ? AND is_approved = ?", restaurant.ID, true).Find(&reviews)
+	c.JSON(200, result)
+}
 
-		var totalRating int
-		var reviewCount int
-		for _, review := range reviews {
-			totalRating += review.Rating
-			reviewCount++
-		}
-
-		avgRating := 0.0
-		if reviewCount > 0 {
-			avgRating = float64(totalRating) / float64(reviewCount)
-		}
-
-		restaurantsWithRatings = append(restaurantsWithRatings, gin.H{
-			"ID":          restaurant.ID,
-			"Slug":        restaurant.Slug,
-			"Name":        restaurant.Name,
-			"Slogan":      restaurant.Slogan,
-			"Place":       restaurant.Place,
-			"Genre":       restaurant.Genre,
-			"Budget":      restaurant.Budget,
-			"Title":       restaurant.Title,
-			"Description": restaurant.Description,
-			"Area":        restaurant.Area,
-			"Address":     restaurant.Address,
-			"Phone":       restaurant.Phone,
-			"Timezone":    restaurant.Timezone,
-			"Capacity":    restaurant.Capacity,
-			"IsOpen":      restaurant.IsOpen,
-			"OpenHours":   restaurant.OpenHours,
-			"Images":      restaurant.Images,
-			"MainImageID": restaurant.MainImageID,
-			"AvgRating":   avgRating,
-			"ReviewCount": reviewCount,
-			"CreatedAt":   restaurant.CreatedAt,
-			"UpdatedAt":   restaurant.UpdatedAt,
-		})
+// Advanced search endpoint
+func (h *PublicHandler) AdvancedSearch(c *gin.Context) {
+	query := c.Query("q")
+	if query == "" {
+		c.JSON(400, gin.H{"error": "search query is required"})
+		return
 	}
 
-	c.JSON(200, restaurantsWithRatings)
+	// Parse search parameters
+	filters := services.SearchFilters{
+		Area:    c.Query("area"),
+		Cuisine: c.Query("cuisine"),
+		Budget:  c.Query("budget"),
+		People:  c.Query("people"),
+		Date:    c.Query("date"),
+		Time:    c.Query("time"),
+		SortBy:  c.DefaultQuery("sort_by", "rating"),
+		SortDir: c.DefaultQuery("sort_dir", "desc"),
+	}
+
+	// Parse pagination parameters
+	if pageStr := c.Query("page"); pageStr != "" {
+		if page, err := strconv.Atoi(pageStr); err == nil && page > 0 {
+			filters.Page = page
+		}
+	}
+	if limitStr := c.Query("limit"); limitStr != "" {
+		if limit, err := strconv.Atoi(limitStr); err == nil && limit > 0 {
+			filters.Limit = limit
+		}
+	}
+
+	// Use advanced search service
+	result, err := h.SearchService.AdvancedSearch(query, filters)
+	if err != nil {
+		c.JSON(500, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(200, result)
+}
+
+// Search suggestions endpoint
+func (h *PublicHandler) SearchSuggestions(c *gin.Context) {
+	query := c.Query("q")
+	if len(query) < 2 {
+		c.JSON(200, gin.H{"suggestions": []string{}})
+		return
+	}
+
+	// Get restaurant names and cuisines that match the query
+	var suggestions []string
+
+	// Search restaurant names
+	var restaurants []db.Restaurant
+	h.DB.Select("name, genre").Where("name ILIKE ?", "%"+query+"%").Limit(5).Find(&restaurants)
+
+	for _, restaurant := range restaurants {
+		suggestions = append(suggestions, restaurant.Name)
+	}
+
+	// Search unique cuisines
+	var cuisines []string
+	h.DB.Model(&db.Restaurant{}).Distinct("genre").Where("genre ILIKE ?", "%"+query+"%").Limit(5).Pluck("genre", &cuisines)
+
+	for _, cuisine := range cuisines {
+		suggestions = append(suggestions, cuisine)
+	}
+
+	// Search areas
+	var areas []string
+	h.DB.Model(&db.Restaurant{}).Distinct("area").Where("area ILIKE ?", "%"+query+"%").Limit(5).Pluck("area", &areas)
+
+	for _, area := range areas {
+		if area != "" {
+			suggestions = append(suggestions, area)
+		}
+	}
+
+	// Remove duplicates and limit results
+	seen := make(map[string]bool)
+	var uniqueSuggestions []string
+	for _, suggestion := range suggestions {
+		if !seen[suggestion] && len(uniqueSuggestions) < 10 {
+			seen[suggestion] = true
+			uniqueSuggestions = append(uniqueSuggestions, suggestion)
+		}
+	}
+
+	c.JSON(200, gin.H{"suggestions": uniqueSuggestions})
+}
+
+// Cache management endpoints
+func (h *PublicHandler) ClearSearchCache(c *gin.Context) {
+	h.SearchService.ClearCache()
+	c.JSON(200, gin.H{"message": "Search cache cleared successfully"})
+}
+
+func (h *PublicHandler) GetCacheStats(c *gin.Context) {
+	stats := h.SearchService.GetCacheStats()
+	c.JSON(200, stats)
 }
 
 func (h *PublicHandler) GetRestaurant(c *gin.Context) {

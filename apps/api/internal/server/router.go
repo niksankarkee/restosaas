@@ -9,7 +9,7 @@ import (
 )
 
 func Mount(r *gin.Engine, gdb *gorm.DB) {
-	pub := handlers.PublicHandler{DB: gdb}
+	pub := handlers.NewPublicHandler(gdb)
 	own := handlers.OwnerHandler{DB: gdb}
 	adm := handlers.AdminHandler{DB: gdb}
 	pay := handlers.PaymentHandler{DB: gdb}
@@ -38,6 +38,12 @@ func Mount(r *gin.Engine, gdb *gorm.DB) {
 		api.POST("/reservations", pub.CreateReservation)
 		api.POST("/reviews", pub.CreateReview)
 		api.GET("/landing/:slug", adm.PublicLanding)
+
+		// Search routes
+		api.GET("/search", pub.AdvancedSearch)
+		api.GET("/search/suggestions", pub.SearchSuggestions)
+		api.DELETE("/search/cache", pub.ClearSearchCache)
+		api.GET("/search/cache/stats", pub.GetCacheStats)
 
 		// User authentication routes (PUBLIC - no auth required)
 		api.POST("/auth/register", usr.CreateUser) // Register new user
