@@ -50,7 +50,7 @@ type RestaurantWithRating struct {
 	Address     string           `json:"address"`
 	Phone       string           `json:"phone"`
 	Timezone    string           `json:"timezone"`
-	Capacity    int              `json:"capacity"`
+	Capacity    int64            `json:"capacity"`
 	IsOpen      bool             `json:"is_open"`
 	MainImageID *string          `json:"main_image_id"`
 	Images      []db.Image       `json:"images"`

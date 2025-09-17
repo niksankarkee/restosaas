@@ -390,7 +390,7 @@ func (h *PublicHandler) CreateReservation(c *gin.Context) {
 		Where("restaurant_id = ? AND status IN ? AND starts_at < ? AND (starts_at + (duration_min || ' minutes')::interval) > ?",
 			resto.ID, []db.ReservationStatus{db.ResvPending, db.ResvConfirmed}, end, start).
 		Select("COALESCE(SUM(party_size),0)").Scan(&used)
-	if int(used)+req.Party > resto.Capacity {
+	if int(used)+req.Party > int(resto.Capacity) {
 		c.JSON(409, gin.H{"error": "restaurant is full at that time"})
 		return
 	}

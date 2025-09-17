@@ -24,7 +24,7 @@ type CreateRestaurantRequest struct {
 	Description string `json:"description"`
 	Address     string `json:"address"`
 	Phone       string `json:"phone"`
-	Capacity    int    `json:"capacity" binding:"min=1"`
+	Capacity    int64  `json:"capacity" binding:"min=1"`
 	IsOpen      bool   `json:"isOpen"`
 }
 
@@ -39,7 +39,7 @@ type UpdateRestaurantRequest struct {
 	Description *string              `json:"description,omitempty"`
 	Address     *string              `json:"address,omitempty"`
 	Phone       *string              `json:"phone,omitempty"`
-	Capacity    *int                 `json:"capacity,omitempty"`
+	Capacity    *int64               `json:"capacity,omitempty"`
 	IsOpen      *bool                `json:"isOpen,omitempty"`
 	MainImageID *string              `json:"mainImageId,omitempty"`
 	OpenHours   []OpeningHourRequest `json:"openHours,omitempty"`
@@ -59,7 +59,7 @@ type ImageRequest struct {
 	URL          string `json:"url"`
 	Alt          string `json:"alt"`
 	IsMain       bool   `json:"isMain"`
-	DisplayOrder int    `json:"displayOrder"`
+	DisplayOrder int64  `json:"displayOrder"`
 }
 
 // RestaurantResponse represents a restaurant in API responses
@@ -75,7 +75,7 @@ type RestaurantResponse struct {
 	Description string                `json:"description"`
 	Address     string                `json:"address"`
 	Phone       string                `json:"phone"`
-	Capacity    int                   `json:"capacity"`
+	Capacity    int64                 `json:"capacity"`
 	IsOpen      bool                  `json:"isOpen"`
 	MainImageID *string               `json:"mainImageId,omitempty"`
 	OpenHours   []OpeningHourResponse `json:"openHours,omitempty"`
@@ -97,7 +97,7 @@ type ImageResponse struct {
 	URL          string `json:"url"`
 	Alt          string `json:"alt"`
 	IsMain       bool   `json:"isMain"`
-	DisplayOrder int    `json:"displayOrder"`
+	DisplayOrder int64  `json:"displayOrder"`
 }
 
 // CreateMenuRequest represents the request to create a menu
@@ -443,7 +443,7 @@ func (h *RestaurantHandler) ListAllRestaurants(c *gin.Context) {
 		Description string    `json:"description"`
 		Address     string    `json:"address"`
 		Phone       string    `json:"phone"`
-		Capacity    int       `json:"capacity"`
+		Capacity    int64     `json:"capacity"`
 		IsOpen      bool      `json:"isOpen"`
 		CreatedAt   time.Time `json:"createdAt"`
 		UpdatedAt   time.Time `json:"updatedAt"`
@@ -490,7 +490,7 @@ func (h *RestaurantHandler) GetRestaurantByID(c *gin.Context) {
 		Description string    `json:"description"`
 		Address     string    `json:"address"`
 		Phone       string    `json:"phone"`
-		Capacity    int       `json:"capacity"`
+		Capacity    int64     `json:"capacity"`
 		IsOpen      bool      `json:"isOpen"`
 		CreatedAt   time.Time `json:"createdAt"`
 		UpdatedAt   time.Time `json:"updatedAt"`
@@ -887,7 +887,7 @@ func (h *RestaurantHandler) CreateRestaurantForOrganization(c *gin.Context) {
 		Description string    `json:"description"`
 		Address     string    `json:"address"`
 		Phone       string    `json:"phone"`
-		Capacity    int       `json:"capacity"`
+		Capacity    int64     `json:"capacity"`
 		IsOpen      bool      `json:"isOpen"`
 		CreatedAt   time.Time `json:"createdAt"`
 		UpdatedAt   time.Time `json:"updatedAt"`

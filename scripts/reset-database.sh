@@ -15,18 +15,17 @@ fi
 
 # Check if the database container exists
 if ! docker ps -a | grep -q restosaas_db; then
-    echo "❌ Database container 'restosaas_db' not found. Please run 'docker compose up -d' first."
-    exit 1
+    echo "ℹ️  Database container 'restosaas_db' not found. Creating fresh container..."
 fi
 
 echo "📦 Stopping and removing existing database container..."
-docker compose down
+docker compose -f infra/docker-compose.yml down
 
 echo "🗑️  Removing database volume to ensure clean state..."
 docker volume rm restosaas_postgres_data 2>/dev/null || true
 
 echo "🚀 Starting fresh database container..."
-docker compose up -d
+docker compose -f infra/docker-compose.yml up -d
 
 echo "⏳ Waiting for database to be ready..."
 sleep 10
