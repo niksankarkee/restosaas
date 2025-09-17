@@ -89,20 +89,47 @@ type OpeningHour struct {
 	IsClosed     bool      `gorm:"not null;default:false"` // If restaurant is closed on this day
 }
 
+type MenuType string
+type MealType string
+
+const (
+	MenuTypeDrink MenuType = "DRINK"
+	MenuTypeFood  MenuType = "FOOD"
+)
+
+const (
+	MealTypeLunch  MealType = "LUNCH"
+	MealTypeDinner MealType = "DINNER"
+	MealTypeBoth   MealType = "BOTH"
+)
+
 type Menu struct {
 	ID           uuid.UUID `gorm:"type:uuid;primaryKey"`
 	RestaurantID uuid.UUID `gorm:"type:uuid;index;not null"`
-	Title        string    `gorm:"not null"`
-	Description  string
-	// Foreign key relationships will be added manually after migration
+	Name         string    `gorm:"not null"`  // Title/Name of the menu item
+	ShortDesc    string    `gorm:"type:text"` // Short description
+	ImageURL     string
+	Price        int      `gorm:"not null"`
+	Type         MenuType `gorm:"type:text;not null"` // DRINK or FOOD
+	MealType     MealType `gorm:"type:text;not null"` // LUNCH, DINNER, or BOTH
+	CreatedAt    time.Time
+	UpdatedAt    time.Time
 }
 
 type Course struct {
-	ID       uuid.UUID `gorm:"type:uuid;primaryKey"`
-	MenuID   uuid.UUID `gorm:"type:uuid;index;not null"`
-	Name     string    `gorm:"not null"`
-	Price    int       `gorm:"not null"`
-	ImageURL string
+	ID            uuid.UUID `gorm:"type:uuid;primaryKey"`
+	RestaurantID  uuid.UUID `gorm:"type:uuid;index;not null"`
+	Title         string    `gorm:"not null"`
+	Description   string
+	ImageURL      string
+	CoursePrice   int    `gorm:"not null"`     // Current price
+	OriginalPrice *int   `gorm:"default:null"` // Optional original price for strikethrough
+	NumberOfItems int    `gorm:"not null;default:1"`
+	StayTime      int    `gorm:"not null"`  // Stay time in minutes
+	CourseContent string `gorm:"type:text"` // Rich text content
+	Precautions   string `gorm:"type:text"` // Precautions items
+	CreatedAt     time.Time
+	UpdatedAt     time.Time
 }
 
 type Image struct {
@@ -134,12 +161,14 @@ type Reservation struct {
 	ID           uuid.UUID         `gorm:"type:uuid;primaryKey"`
 	RestaurantID uuid.UUID         `gorm:"type:uuid;index;not null"`
 	CustomerID   uuid.UUID         `gorm:"type:uuid;index"`
+	CourseID     *uuid.UUID        `gorm:"type:uuid;index"` // Optional course reservation
 	StartsAt     time.Time         `gorm:"index;not null"`
 	DurationMin  int               `gorm:"not null;default:90"`
 	PartySize    int               `gorm:"not null"`
 	Status       ReservationStatus `gorm:"type:text;not null;default:PENDING"`
 	CreatedAt    time.Time
 	Customer     Customer
+	Course       *Course `gorm:"foreignKey:CourseID"` // Course details if reserved
 }
 
 type Review struct {
@@ -241,16 +270,30 @@ func AutoMigrate(db *gorm.DB) error {
 	CREATE TABLE IF NOT EXISTS menus (
 		id UUID PRIMARY KEY,
 		restaurant_id UUID NOT NULL,
-		title VARCHAR(255) NOT NULL,
-		description TEXT
+		name VARCHAR(255) NOT NULL,
+		short_desc TEXT,
+		image_url VARCHAR(500),
+		price INTEGER NOT NULL,
+		type VARCHAR(10) NOT NULL,
+		meal_type VARCHAR(10) NOT NULL,
+		created_at TIMESTAMP,
+		updated_at TIMESTAMP
 	);
 	
 	CREATE TABLE IF NOT EXISTS courses (
 		id UUID PRIMARY KEY,
-		menu_id UUID NOT NULL,
-		name VARCHAR(255) NOT NULL,
-		price INTEGER NOT NULL,
-		image_url VARCHAR(500)
+		restaurant_id UUID NOT NULL,
+		title VARCHAR(255) NOT NULL,
+		description TEXT,
+		image_url VARCHAR(500),
+		course_price INTEGER NOT NULL,
+		original_price INTEGER,
+		number_of_items INTEGER NOT NULL DEFAULT 1,
+		stay_time INTEGER NOT NULL,
+		course_content TEXT,
+		precautions TEXT,
+		created_at TIMESTAMP,
+		updated_at TIMESTAMP
 	);
 	
 	CREATE TABLE IF NOT EXISTS images (
@@ -273,6 +316,7 @@ func AutoMigrate(db *gorm.DB) error {
 		id UUID PRIMARY KEY,
 		restaurant_id UUID NOT NULL,
 		customer_id UUID,
+		course_id UUID,
 		starts_at TIMESTAMP NOT NULL,
 		duration_min INTEGER NOT NULL DEFAULT 90,
 		party_size INTEGER NOT NULL,

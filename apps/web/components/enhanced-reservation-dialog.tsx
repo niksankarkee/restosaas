@@ -54,6 +54,7 @@ interface EnhancedReservationDialogProps {
   restaurantName?: string;
   restaurantCapacity?: number;
   openHours?: OpeningHour[];
+  courseId?: string; // Optional course ID for course-specific reservations
   onReservationSubmitted?: () => void;
 }
 
@@ -74,6 +75,7 @@ export function EnhancedReservationDialog({
   restaurantName,
   restaurantCapacity = 30,
   openHours = [],
+  courseId,
   onReservationSubmitted,
 }: EnhancedReservationDialogProps) {
   const { user, isAuthenticated } = useAuth();
@@ -223,6 +225,7 @@ export function EnhancedReservationDialog({
         startsAt: `${selectedDate}T${selectedTime}:00.000Z`,
         duration: 90, // 90 minutes default
         party: partySize,
+        courseId: courseId || undefined, // Include course ID if provided
         customer: {
           name: formData.customerName.trim(),
           email: formData.customerEmail.trim(),

@@ -1135,7 +1135,7 @@ function EditRestaurantForm({
         <div className='space-y-2'>
           <Label>Description</Label>
           <RichTextEditor
-            content={description}
+            value={description}
             onChange={setDescription}
             placeholder='Describe your restaurant, its history, specialties, and what makes it unique...'
           />

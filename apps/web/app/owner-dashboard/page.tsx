@@ -205,13 +205,15 @@ function OwnerDashboardContent() {
             <div className='grid grid-cols-1 md:grid-cols-3 gap-4'>
               <Card>
                 <CardContent className='p-6 text-center'>
-                  <h3 className='font-semibold text-gray-900 mb-2'>Menus</h3>
+                  <h3 className='font-semibold text-gray-900 mb-2'>
+                    Menu & Course Management
+                  </h3>
                   <p className='text-gray-600 mb-4'>
-                    Manage your restaurant menus
+                    Manage your restaurant menus and courses separately
                   </p>
                   <Link href='/owner-dashboard/menus'>
                     <Button variant='outline' size='sm' className='w-full'>
-                      Manage Menus
+                      Manage Menu & Courses
                     </Button>
                   </Link>
                 </CardContent>
