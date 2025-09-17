@@ -33,7 +33,7 @@ const datePickerVariants = cva(
 export interface EnhancedDatePickerProps
   extends Omit<
       React.InputHTMLAttributes<HTMLInputElement>,
-      'onChange' | 'value'
+      'onChange' | 'value' | 'size'
     >,
     VariantProps<typeof datePickerVariants> {
   label?: string;
@@ -50,10 +50,7 @@ export interface EnhancedDatePickerProps
   placeholder?: string;
 }
 
-const EnhancedDatePicker = forwardRef<
-  HTMLInputElement,
-  EnhancedDatePickerProps
->(
+const EnhancedDatePicker = forwardRef<any, EnhancedDatePickerProps>(
   (
     {
       className,
@@ -98,7 +95,14 @@ const EnhancedDatePicker = forwardRef<
           <DatePicker
             id={inputId}
             selected={value}
-            onChange={onChange}
+            onChange={(dates) => {
+              // Handle both single and multiple date selection
+              if (Array.isArray(dates)) {
+                onChange?.(dates[0] || null);
+              } else {
+                onChange?.(dates);
+              }
+            }}
             dateFormat={format}
             showTimeSelect={showTimeSelect}
             timeFormat={timeFormat}
@@ -106,6 +110,7 @@ const EnhancedDatePicker = forwardRef<
             minDate={minDate}
             maxDate={maxDate}
             placeholderText={placeholder}
+            selectsMultiple={true}
             className={cn(
               datePickerVariants({
                 variant: datePickerVariant,
@@ -116,7 +121,6 @@ const EnhancedDatePicker = forwardRef<
             )}
             wrapperClassName='w-full'
             ref={ref}
-            {...props}
           />
           <div className='absolute right-3 top-1/2 transform -translate-y-1/2 pointer-events-none'>
             {showTimeSelect ? (

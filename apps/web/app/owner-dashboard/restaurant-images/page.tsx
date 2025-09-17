@@ -5,8 +5,9 @@ import { Button } from '@/components/ui/button';
 import { RoleGuard } from '@/components/auth/role-guard';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { CloudinaryUpload } from '@/components/ui/cloudinary-upload';
 import { api } from '@/lib/api';
-import { Star, Upload, Trash2, Image as ImageIcon } from 'lucide-react';
+import { Star, Upload, Trash2, Image as ImageIcon, X } from 'lucide-react';
 import Link from 'next/link';
 
 interface RestaurantImage {
@@ -31,6 +32,7 @@ function RestaurantImagesPageContent() {
   const [isLoading, setIsLoading] = useState(true);
   const [isUploading, setIsUploading] = useState(false);
   const [isFetching, setIsFetching] = useState(false);
+  const [showUploadDialog, setShowUploadDialog] = useState(false);
 
   useEffect(() => {
     fetchRestaurant();
@@ -91,36 +93,38 @@ function RestaurantImagesPageContent() {
     }
   };
 
-  const handleFileUpload = async (
-    event: React.ChangeEvent<HTMLInputElement>
-  ) => {
-    const files = event.target.files;
-    if (!files || files.length === 0 || !restaurant) return;
+  const handleCloudinaryUpload = async (urls: string[]) => {
+    if (!restaurant || urls.length === 0) return;
 
     setIsUploading(true);
     try {
-      const formData = new FormData();
-      Array.from(files).forEach((file) => {
-        formData.append('images', file);
-      });
+      // Create image objects for the API
+      const imageData = urls.map((url, index) => ({
+        url: url,
+        alt: `Restaurant image ${index + 1}`,
+        isMain: false,
+        displayOrder: images.length + index,
+      }));
 
+      // Send to your API to save to database
       const response = await api.post(
         `/owner/restaurants/${restaurant.id}/images`,
-        formData,
-        {
-          headers: {
-            'Content-Type': 'multipart/form-data',
-          },
-        }
+        { images: imageData }
       );
 
       // Refresh images
       await fetchRestaurant();
+      setShowUploadDialog(false);
     } catch (error) {
-      console.error('Failed to upload images:', error);
+      console.error('Failed to save images to database:', error);
     } finally {
       setIsUploading(false);
     }
+  };
+
+  const handleUploadError = (error: string) => {
+    console.error('Cloudinary upload error:', error);
+    // You can add a toast notification here
   };
 
   if (isLoading) {
@@ -178,20 +182,13 @@ function RestaurantImagesPageContent() {
             <Link href='/owner-dashboard'>
               <Button variant='outline'>Back to Dashboard</Button>
             </Link>
-            <div className='relative'>
-              <input
-                type='file'
-                multiple
-                accept='image/*'
-                onChange={handleFileUpload}
-                className='absolute inset-0 w-full h-full opacity-0 cursor-pointer'
-                disabled={isUploading}
-              />
-              <Button disabled={isUploading}>
-                <Upload className='w-4 h-4 mr-2' />
-                {isUploading ? 'Uploading...' : 'Upload Images'}
-              </Button>
-            </div>
+            <Button
+              onClick={() => setShowUploadDialog(true)}
+              disabled={isUploading}
+            >
+              <Upload className='w-4 h-4 mr-2' />
+              {isUploading ? 'Uploading...' : 'Upload Images to Cloudinary'}
+            </Button>
           </div>
         </div>
 
@@ -205,20 +202,13 @@ function RestaurantImagesPageContent() {
               <p className='text-gray-600 mb-4'>
                 Upload some images to showcase your restaurant.
               </p>
-              <div className='relative inline-block'>
-                <input
-                  type='file'
-                  multiple
-                  accept='image/*'
-                  onChange={handleFileUpload}
-                  className='absolute inset-0 w-full h-full opacity-0 cursor-pointer'
-                  disabled={isUploading}
-                />
-                <Button disabled={isUploading}>
-                  <Upload className='w-4 h-4 mr-2' />
-                  {isUploading ? 'Uploading...' : 'Upload Images'}
-                </Button>
-              </div>
+              <Button
+                onClick={() => setShowUploadDialog(true)}
+                disabled={isUploading}
+              >
+                <Upload className='w-4 h-4 mr-2' />
+                {isUploading ? 'Uploading...' : 'Upload Images to Cloudinary'}
+              </Button>
             </CardContent>
           </Card>
         ) : (
@@ -308,6 +298,35 @@ function RestaurantImagesPageContent() {
             </p>
           </CardContent>
         </Card>
+
+        {/* Upload Dialog */}
+        {showUploadDialog && (
+          <div className='fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4'>
+            <Card className='w-full max-w-4xl max-h-[90vh] overflow-y-auto'>
+              <CardHeader>
+                <div className='flex justify-between items-center'>
+                  <CardTitle>Upload Images to Cloudinary</CardTitle>
+                  <Button
+                    variant='ghost'
+                    size='sm'
+                    onClick={() => setShowUploadDialog(false)}
+                  >
+                    <X className='w-4 h-4' />
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <CloudinaryUpload
+                  onUpload={handleCloudinaryUpload}
+                  onError={handleUploadError}
+                  multiple={true}
+                  maxFiles={10}
+                  folder='restosaas/restaurants'
+                />
+              </CardContent>
+            </Card>
+          </div>
+        )}
       </div>
     </div>
   );

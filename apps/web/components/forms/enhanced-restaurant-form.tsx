@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { RichTextEditor } from '@/components/ui/rich-text-editor';
+import { CloudinaryUpload } from '@/components/ui/cloudinary-upload';
 import {
   Card,
   CardContent,
@@ -118,6 +119,7 @@ export function EnhancedRestaurantForm({
   );
   const [images, setImages] = useState<ImageData[]>(initialData?.images || []);
   const [newImageUrl, setNewImageUrl] = useState('');
+  const [showCloudinaryUpload, setShowCloudinaryUpload] = useState(false);
 
   const {
     register,
@@ -174,6 +176,23 @@ export function EnhancedRestaurantForm({
     setImages([...images, newImage]);
     setNewImageUrl('');
     setError(''); // Clear any previous errors
+  };
+
+  const handleCloudinaryUpload = (urls: string[]) => {
+    const newImages: ImageData[] = urls.map((url, index) => ({
+      url: url,
+      alt: `Restaurant image ${images.length + index + 1}`,
+      isMain: images.length === 0 && index === 0, // First image is main by default
+      displayOrder: images.length + index,
+    }));
+
+    setImages([...images, ...newImages]);
+    setShowCloudinaryUpload(false);
+  };
+
+  const handleCloudinaryError = (error: string) => {
+    console.error('Cloudinary upload error:', error);
+    // You can add a toast notification here
   };
 
   const removeImage = (index: number) => {
@@ -573,28 +592,39 @@ export function EnhancedRestaurantForm({
                   <h3 className='text-lg font-semibold'>Restaurant Images</h3>
                 </div>
                 <p className='text-sm text-gray-600'>
-                  Add images of your restaurant by entering image URLs. The
-                  first image will be used as the main image.
+                  Add images of your restaurant by uploading to Cloudinary or
+                  entering image URLs. The first image will be used as the main
+                  image.
                 </p>
 
-                {/* Add Image URL */}
+                {/* Upload Options */}
                 <div className='space-y-4'>
                   <div className='flex space-x-2'>
-                    <Input
-                      type='url'
-                      placeholder='Enter image URL (e.g., https://example.com/image.jpg)'
-                      value={newImageUrl}
-                      onChange={(e) => setNewImageUrl(e.target.value)}
-                      className='flex-1'
-                    />
                     <Button
                       type='button'
-                      onClick={addImage}
-                      disabled={!newImageUrl.trim()}
+                      onClick={() => setShowCloudinaryUpload(true)}
+                      className='flex-1'
                     >
                       <Upload className='h-4 w-4 mr-2' />
-                      Add Image
+                      Upload to Cloudinary
                     </Button>
+                    <div className='flex-1 flex space-x-2'>
+                      <Input
+                        type='url'
+                        placeholder='Or enter image URL (e.g., https://example.com/image.jpg)'
+                        value={newImageUrl}
+                        onChange={(e) => setNewImageUrl(e.target.value)}
+                        className='flex-1'
+                      />
+                      <Button
+                        type='button'
+                        onClick={addImage}
+                        disabled={!newImageUrl.trim()}
+                      >
+                        <Upload className='h-4 w-4 mr-2' />
+                        Add URL
+                      </Button>
+                    </div>
                   </div>
 
                   {/* Image URL Help */}
@@ -665,6 +695,35 @@ export function EnhancedRestaurantForm({
             {error && (
               <div className='text-sm text-red-600 bg-red-50 p-3 rounded-md'>
                 {error}
+              </div>
+            )}
+
+            {/* Cloudinary Upload Dialog */}
+            {showCloudinaryUpload && (
+              <div className='fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4'>
+                <Card className='w-full max-w-4xl max-h-[90vh] overflow-y-auto'>
+                  <CardHeader>
+                    <div className='flex justify-between items-center'>
+                      <CardTitle>Upload Images to Cloudinary</CardTitle>
+                      <Button
+                        variant='ghost'
+                        size='sm'
+                        onClick={() => setShowCloudinaryUpload(false)}
+                      >
+                        <X className='w-4 h-4' />
+                      </Button>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <CloudinaryUpload
+                      onUpload={handleCloudinaryUpload}
+                      onError={handleCloudinaryError}
+                      multiple={true}
+                      maxFiles={10}
+                      folder='restosaas/restaurants'
+                    />
+                  </CardContent>
+                </Card>
               </div>
             )}
 

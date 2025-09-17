@@ -205,7 +205,7 @@ export default function Restaurants() {
             restaurant.images?.find((img) => img.IsMain) ||
             restaurant.images?.[0];
           const isOpenNow =
-            restaurant.is_open &&
+            restaurant.isOpen &&
             restaurant.open_hours?.some((hour) => {
               const now = new Date();
               const dayOfWeek = now.getDay();
