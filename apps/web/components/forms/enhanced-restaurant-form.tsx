@@ -21,18 +21,49 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Clock, Camera, Upload, X, Star } from 'lucide-react';
 import { api } from '@/lib/api';
+import { VALIDATION, ERROR_MESSAGES, BUSINESS } from '@/lib/constants';
 
 const restaurantSchema = z.object({
-  name: z.string().min(2, 'Restaurant name must be at least 2 characters'),
-  slogan: z.string().min(5, 'Slogan must be at least 5 characters'),
-  place: z.string().min(2, 'Place must be at least 2 characters'),
-  genre: z.string().min(2, 'Genre must be at least 2 characters'),
+  name: z
+    .string()
+    .min(
+      VALIDATION.MIN_NAME_LENGTH,
+      `Restaurant name must be at least ${VALIDATION.MIN_NAME_LENGTH} character`
+    ),
+  slogan: z
+    .string()
+    .min(
+      VALIDATION.MIN_TITLE_LENGTH,
+      `Slogan must be at least ${VALIDATION.MIN_TITLE_LENGTH} character`
+    ),
+  place: z
+    .string()
+    .min(
+      VALIDATION.MIN_NAME_LENGTH,
+      `Place must be at least ${VALIDATION.MIN_NAME_LENGTH} character`
+    ),
+  genre: z
+    .string()
+    .min(
+      VALIDATION.MIN_NAME_LENGTH,
+      `Genre must be at least ${VALIDATION.MIN_NAME_LENGTH} character`
+    ),
   budget: z.string().min(1, 'Budget is required'),
-  title: z.string().min(2, 'Title must be at least 2 characters'),
+  title: z
+    .string()
+    .min(
+      VALIDATION.MIN_TITLE_LENGTH,
+      `Title must be at least ${VALIDATION.MIN_TITLE_LENGTH} character`
+    ),
   description: z.string().optional(),
   address: z.string().optional(),
   phone: z.string().optional(),
-  capacity: z.number().min(1, 'Capacity must be at least 1'),
+  capacity: z
+    .number()
+    .min(
+      BUSINESS.MIN_CAPACITY,
+      `Capacity must be at least ${BUSINESS.MIN_CAPACITY}`
+    ),
   isOpen: z.boolean().default(true),
 });
 

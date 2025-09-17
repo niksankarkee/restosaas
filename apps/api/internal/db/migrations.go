@@ -3,21 +3,29 @@ package db
 import (
 	"fmt"
 
+	"github.com/example/restosaas/apps/api/internal/logger"
 	"gorm.io/gorm"
 )
 
 // RunMigrations runs all database migrations to ensure schema consistency
 func RunMigrations(db *gorm.DB) error {
+	logger.Info("RunMigrations: Starting database migrations")
+
 	// First run GORM AutoMigrate
 	if err := AutoMigrate(db); err != nil {
+		logger.Errorf("RunMigrations: Failed to run GORM AutoMigrate - %v", err)
 		return fmt.Errorf("failed to run auto migration: %w", err)
 	}
 
+	logger.Info("RunMigrations: GORM AutoMigrate completed successfully")
+
 	// Then run custom migrations to match the current database state
 	if err := runCustomMigrations(db); err != nil {
+		logger.Errorf("RunMigrations: Failed to run custom migrations - %v", err)
 		return fmt.Errorf("failed to run custom migrations: %w", err)
 	}
 
+	logger.Info("RunMigrations: All database migrations completed successfully")
 	return nil
 }
 
@@ -85,42 +93,46 @@ func runCustomMigrations(db *gorm.DB) error {
 		},
 		{
 			name:        "add_foreign_key_org_members_user",
-			query:       `DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM information_schema.table_constraints WHERE constraint_name = 'fk_org_members_user') THEN ALTER TABLE org_members ADD CONSTRAINT fk_org_members_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE; END IF; END $$`,
+			query:       `ALTER TABLE org_members ADD CONSTRAINT fk_org_members_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE`,
 			checkQuery:  `SELECT COUNT(*) FROM information_schema.table_constraints WHERE constraint_name = 'fk_org_members_user'`,
 			description: "Add foreign key constraint for user_id in org_members",
 		},
 		{
 			name:        "add_foreign_key_org_members_org",
-			query:       `DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM information_schema.table_constraints WHERE constraint_name = 'fk_organizations_users') THEN ALTER TABLE org_members ADD CONSTRAINT fk_organizations_users FOREIGN KEY (org_id) REFERENCES organizations(id) ON DELETE CASCADE; END IF; END $$`,
+			query:       `ALTER TABLE org_members ADD CONSTRAINT fk_organizations_users FOREIGN KEY (org_id) REFERENCES organizations(id) ON DELETE CASCADE`,
 			checkQuery:  `SELECT COUNT(*) FROM information_schema.table_constraints WHERE constraint_name = 'fk_organizations_users'`,
 			description: "Add foreign key constraint for org_id in org_members",
 		},
 		{
 			name:        "add_foreign_key_restaurants_org",
-			query:       `DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM information_schema.table_constraints WHERE constraint_name = 'fk_organizations_restaurant') THEN ALTER TABLE restaurants ADD CONSTRAINT fk_organizations_restaurant FOREIGN KEY (org_id) REFERENCES organizations(id) ON DELETE CASCADE; END IF; END $$`,
+			query:       `ALTER TABLE restaurants ADD CONSTRAINT fk_organizations_restaurant FOREIGN KEY (org_id) REFERENCES organizations(id) ON DELETE CASCADE`,
 			checkQuery:  `SELECT COUNT(*) FROM information_schema.table_constraints WHERE constraint_name = 'fk_organizations_restaurant'`,
 			description: "Add foreign key constraint for org_id in restaurants",
 		},
 		{
 			name:        "add_foreign_key_images_restaurant",
-			query:       `DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM information_schema.table_constraints WHERE constraint_name = 'fk_restaurants_images') THEN ALTER TABLE images ADD CONSTRAINT fk_restaurants_images FOREIGN KEY (restaurant_id) REFERENCES restaurants(id) ON DELETE CASCADE; END IF; END $$`,
+			query:       `ALTER TABLE images ADD CONSTRAINT fk_restaurants_images FOREIGN KEY (restaurant_id) REFERENCES restaurants(id) ON DELETE CASCADE`,
 			checkQuery:  `SELECT COUNT(*) FROM information_schema.table_constraints WHERE constraint_name = 'fk_restaurants_images'`,
 			description: "Add foreign key constraint for restaurant_id in images",
 		},
 		{
 			name:        "add_foreign_key_opening_hours_restaurant",
-			query:       `DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM information_schema.table_constraints WHERE constraint_name = 'fk_restaurants_open_hours') THEN ALTER TABLE opening_hours ADD CONSTRAINT fk_restaurants_open_hours FOREIGN KEY (restaurant_id) REFERENCES restaurants(id) ON DELETE CASCADE; END IF; END $$`,
+			query:       `ALTER TABLE opening_hours ADD CONSTRAINT fk_restaurants_open_hours FOREIGN KEY (restaurant_id) REFERENCES restaurants(id) ON DELETE CASCADE`,
 			checkQuery:  `SELECT COUNT(*) FROM information_schema.table_constraints WHERE constraint_name = 'fk_restaurants_open_hours'`,
 			description: "Add foreign key constraint for restaurant_id in opening_hours",
 		},
 	}
 
 	for _, migration := range migrations {
+		logger.Debugf("runCustomMigrations: Running migration %s - %s", migration.name, migration.description)
 		if err := runMigration(db, migration); err != nil {
+			logger.Errorf("runCustomMigrations: Failed to run migration %s - %v", migration.name, err)
 			return fmt.Errorf("failed to run migration %s: %w", migration.name, err)
 		}
+		logger.Debugf("runCustomMigrations: Successfully completed migration %s", migration.name)
 	}
 
+	logger.Info("runCustomMigrations: All custom migrations completed successfully")
 	return nil
 }
 
@@ -134,18 +146,23 @@ func runMigration(db *gorm.DB, migration struct {
 	// Check if migration is already applied
 	var count int64
 	if err := db.Raw(migration.checkQuery).Scan(&count).Error; err != nil {
+		logger.Errorf("runMigration: Failed to check migration status for %s - %v", migration.name, err)
 		return fmt.Errorf("failed to check migration status: %w", err)
 	}
 
 	// If count > 0, migration is already applied
 	if count > 0 {
+		logger.Debugf("runMigration: Migration %s already applied, skipping", migration.name)
 		return nil
 	}
 
 	// Run the migration
+	logger.Debugf("runMigration: Executing migration %s", migration.name)
 	if err := db.Exec(migration.query).Error; err != nil {
+		logger.Errorf("runMigration: Failed to execute migration %s - %v", migration.name, err)
 		return fmt.Errorf("failed to execute migration query: %w", err)
 	}
 
+	logger.Debugf("runMigration: Successfully executed migration %s", migration.name)
 	return nil
 }

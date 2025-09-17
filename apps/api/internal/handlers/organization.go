@@ -5,7 +5,9 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/example/restosaas/apps/api/internal/constants"
 	"github.com/example/restosaas/apps/api/internal/db"
+	"github.com/example/restosaas/apps/api/internal/logger"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
@@ -50,24 +52,32 @@ type AssignMultipleUsersRequest struct {
 // @Failure 500 {object} map[string]string
 // @Router /super-admin/organizations [post]
 func (h *OrganizationHandler) CreateOrganization(c *gin.Context) {
+	logger.Debug("CreateOrganization: Starting organization creation process")
+
 	var req CreateOrganizationRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(400, gin.H{"error": err.Error()})
+		logger.Warnf("CreateOrganization: Invalid request body - %v", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
+
+	logger.Debugf("CreateOrganization: Processing request for organization %s", req.Name)
 
 	// Create organization
 	org := db.Organization{
 		ID:                 uuid.New(),
 		Name:               req.Name,
-		SubscriptionStatus: "INACTIVE",
+		SubscriptionStatus: constants.SubscriptionStatusInactive,
 		CreatedAt:          time.Now(),
 	}
 
 	if err := h.DB.Create(&org).Error; err != nil {
-		c.JSON(500, gin.H{"error": "failed to create organization"})
+		logger.Errorf("CreateOrganization: Failed to create organization in database - %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": constants.ErrFailedToCreateOrganization})
 		return
 	}
+
+	logger.Infof("CreateOrganization: Organization created successfully with ID %s", org.ID.String())
 
 	response := OrganizationResponse{
 		ID:                 org.ID.String(),
@@ -77,7 +87,8 @@ func (h *OrganizationHandler) CreateOrganization(c *gin.Context) {
 		RestaurantCount:    0,
 	}
 
-	c.JSON(201, response)
+	logger.Infof("CreateOrganization: Organization creation completed successfully for %s", org.Name)
+	c.JSON(http.StatusCreated, response)
 }
 
 // ListOrganizations godoc
@@ -92,30 +103,36 @@ func (h *OrganizationHandler) CreateOrganization(c *gin.Context) {
 // @Failure 500 {object} map[string]string
 // @Router /super-admin/organizations [get]
 func (h *OrganizationHandler) ListOrganizations(c *gin.Context) {
-	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
-	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "10"))
+	logger.Debug("ListOrganizations: Starting organization listing process")
+
+	page, _ := strconv.Atoi(c.DefaultQuery("page", constants.DefaultPageStr))
+	limit, _ := strconv.Atoi(c.DefaultQuery("limit", constants.DefaultLimitStr))
 
 	if page < 1 {
 		page = 1
 	}
-	if limit < 1 || limit > 100 {
-		limit = 10
+	if limit < 1 || limit > constants.MaxLimit {
+		limit = constants.DefaultLimit
 	}
 
 	offset := (page - 1) * limit
+
+	logger.Debugf("ListOrganizations: Fetching organizations with page=%d, limit=%d, offset=%d", page, limit, offset)
 
 	var organizations []db.Organization
 	var total int64
 
 	// Get total count
 	if err := h.DB.Model(&db.Organization{}).Count(&total).Error; err != nil {
-		c.JSON(500, gin.H{"error": "failed to count organizations"})
+		logger.Errorf("ListOrganizations: Failed to count organizations - %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": constants.ErrFailedToCountOrganizations})
 		return
 	}
 
 	// Get organizations
 	if err := h.DB.Offset(offset).Limit(limit).Find(&organizations).Error; err != nil {
-		c.JSON(500, gin.H{"error": "failed to fetch organizations"})
+		logger.Errorf("ListOrganizations: Failed to fetch organizations - %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": constants.ErrFailedToFetchOrganizations})
 		return
 	}
 
@@ -134,7 +151,9 @@ func (h *OrganizationHandler) ListOrganizations(c *gin.Context) {
 		})
 	}
 
-	c.JSON(200, gin.H{
+	logger.Infof("ListOrganizations: Successfully fetched %d organizations (page %d of %d)", len(response), page, (int(total)+limit-1)/limit)
+
+	c.JSON(http.StatusOK, gin.H{
 		"organizations": response,
 		"pagination": gin.H{
 			"page":  page,
@@ -157,20 +176,27 @@ func (h *OrganizationHandler) ListOrganizations(c *gin.Context) {
 // @Failure 500 {object} map[string]string
 // @Router /super-admin/organizations/{id} [get]
 func (h *OrganizationHandler) GetOrganization(c *gin.Context) {
+	logger.Debug("GetOrganization: Starting organization retrieval process")
+
 	id := c.Param("id")
 	orgID, err := uuid.Parse(id)
 	if err != nil {
-		c.JSON(400, gin.H{"error": "invalid organization ID"})
+		logger.Warnf("GetOrganization: Invalid organization ID format - %s", id)
+		c.JSON(http.StatusBadRequest, gin.H{"error": constants.ErrInvalidOrganizationID})
 		return
 	}
+
+	logger.Debugf("GetOrganization: Fetching organization with ID %s", orgID.String())
 
 	var org db.Organization
 	if err := h.DB.Where("id = ?", orgID).First(&org).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
-			c.JSON(404, gin.H{"error": "organization not found"})
+			logger.Warnf("GetOrganization: Organization not found with ID %s", orgID.String())
+			c.JSON(http.StatusNotFound, gin.H{"error": constants.ErrOrganizationNotFound})
 			return
 		}
-		c.JSON(500, gin.H{"error": "failed to fetch organization"})
+		logger.Errorf("GetOrganization: Failed to fetch organization - %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": constants.ErrFailedToFetchOrganization})
 		return
 	}
 
@@ -185,7 +211,8 @@ func (h *OrganizationHandler) GetOrganization(c *gin.Context) {
 		RestaurantCount:    int(restaurantCount),
 	}
 
-	c.JSON(200, response)
+	logger.Infof("GetOrganization: Successfully retrieved organization %s", org.Name)
+	c.JSON(http.StatusOK, response)
 }
 
 // UpdateOrganization godoc
@@ -202,27 +229,35 @@ func (h *OrganizationHandler) GetOrganization(c *gin.Context) {
 // @Failure 500 {object} map[string]string
 // @Router /super-admin/organizations/{id} [put]
 func (h *OrganizationHandler) UpdateOrganization(c *gin.Context) {
+	logger.Debug("UpdateOrganization: Starting organization update process")
+
 	id := c.Param("id")
 	orgID, err := uuid.Parse(id)
 	if err != nil {
-		c.JSON(400, gin.H{"error": "invalid organization ID"})
+		logger.Warnf("UpdateOrganization: Invalid organization ID format - %s", id)
+		c.JSON(http.StatusBadRequest, gin.H{"error": constants.ErrInvalidOrganizationID})
 		return
 	}
 
 	var req UpdateOrganizationRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(400, gin.H{"error": err.Error()})
+		logger.Warnf("UpdateOrganization: Invalid request body - %v", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
+
+	logger.Debugf("UpdateOrganization: Updating organization with ID %s", orgID.String())
 
 	// Check if organization exists
 	var org db.Organization
 	if err := h.DB.Where("id = ?", orgID).First(&org).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
-			c.JSON(404, gin.H{"error": "organization not found"})
+			logger.Warnf("UpdateOrganization: Organization not found with ID %s", orgID.String())
+			c.JSON(http.StatusNotFound, gin.H{"error": constants.ErrOrganizationNotFound})
 			return
 		}
-		c.JSON(500, gin.H{"error": "failed to fetch organization"})
+		logger.Errorf("UpdateOrganization: Failed to fetch organization - %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": constants.ErrFailedToFetchOrganization})
 		return
 	}
 
@@ -232,7 +267,8 @@ func (h *OrganizationHandler) UpdateOrganization(c *gin.Context) {
 	}
 
 	if err := h.DB.Save(&org).Error; err != nil {
-		c.JSON(500, gin.H{"error": "failed to update organization"})
+		logger.Errorf("UpdateOrganization: Failed to update organization in database - %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": constants.ErrFailedToUpdateOrganization})
 		return
 	}
 
@@ -247,7 +283,8 @@ func (h *OrganizationHandler) UpdateOrganization(c *gin.Context) {
 		RestaurantCount:    int(restaurantCount),
 	}
 
-	c.JSON(200, response)
+	logger.Infof("UpdateOrganization: Successfully updated organization %s", org.Name)
+	c.JSON(http.StatusOK, response)
 }
 
 // DeleteOrganization godoc
@@ -263,30 +300,39 @@ func (h *OrganizationHandler) UpdateOrganization(c *gin.Context) {
 // @Failure 500 {object} map[string]string
 // @Router /super-admin/organizations/{id} [delete]
 func (h *OrganizationHandler) DeleteOrganization(c *gin.Context) {
+	logger.Debug("DeleteOrganization: Starting organization deletion process")
+
 	id := c.Param("id")
 	orgID, err := uuid.Parse(id)
 	if err != nil {
-		c.JSON(400, gin.H{"error": "invalid organization ID"})
+		logger.Warnf("DeleteOrganization: Invalid organization ID format - %s", id)
+		c.JSON(http.StatusBadRequest, gin.H{"error": constants.ErrInvalidOrganizationID})
 		return
 	}
+
+	logger.Debugf("DeleteOrganization: Deleting organization with ID %s", orgID.String())
 
 	// Check if organization exists
 	var org db.Organization
 	if err := h.DB.Where("id = ?", orgID).First(&org).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
-			c.JSON(404, gin.H{"error": "organization not found"})
+			logger.Warnf("DeleteOrganization: Organization not found with ID %s", orgID.String())
+			c.JSON(http.StatusNotFound, gin.H{"error": constants.ErrOrganizationNotFound})
 			return
 		}
-		c.JSON(500, gin.H{"error": "failed to fetch organization"})
+		logger.Errorf("DeleteOrganization: Failed to fetch organization - %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": constants.ErrFailedToFetchOrganization})
 		return
 	}
 
 	// Delete organization (cascade will handle restaurants)
 	if err := h.DB.Delete(&org).Error; err != nil {
-		c.JSON(500, gin.H{"error": "failed to delete organization"})
+		logger.Errorf("DeleteOrganization: Failed to delete organization from database - %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": constants.ErrFailedToDeleteOrganization})
 		return
 	}
 
+	logger.Infof("DeleteOrganization: Successfully deleted organization %s", org.Name)
 	c.Status(http.StatusNoContent)
 }
 
@@ -304,33 +350,42 @@ func (h *OrganizationHandler) DeleteOrganization(c *gin.Context) {
 // @Failure 500 {object} map[string]string
 // @Router /super-admin/organizations/{id}/assign-owner [post]
 func (h *OrganizationHandler) AssignOwner(c *gin.Context) {
+	logger.Debug("AssignOwner: Starting owner assignment process")
+
 	id := c.Param("id")
 	orgID, err := uuid.Parse(id)
 	if err != nil {
-		c.JSON(400, gin.H{"error": "invalid organization ID"})
+		logger.Warnf("AssignOwner: Invalid organization ID format - %s", id)
+		c.JSON(http.StatusBadRequest, gin.H{"error": constants.ErrInvalidOrganizationID})
 		return
 	}
 
 	var req AssignOwnerRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(400, gin.H{"error": err.Error()})
+		logger.Warnf("AssignOwner: Invalid request body - %v", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
 	ownerID, err := uuid.Parse(req.OwnerID)
 	if err != nil {
-		c.JSON(400, gin.H{"error": "invalid owner ID"})
+		logger.Warnf("AssignOwner: Invalid owner ID format - %s", req.OwnerID)
+		c.JSON(http.StatusBadRequest, gin.H{"error": constants.ErrInvalidOwnerID})
 		return
 	}
+
+	logger.Debugf("AssignOwner: Assigning owner %s to organization %s", ownerID.String(), orgID.String())
 
 	// Check if organization exists
 	var org db.Organization
 	if err := h.DB.Where("id = ?", orgID).First(&org).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
-			c.JSON(404, gin.H{"error": "organization not found"})
+			logger.Warnf("AssignOwner: Organization not found with ID %s", orgID.String())
+			c.JSON(http.StatusNotFound, gin.H{"error": constants.ErrOrganizationNotFound})
 			return
 		}
-		c.JSON(500, gin.H{"error": "failed to fetch organization"})
+		logger.Errorf("AssignOwner: Failed to fetch organization - %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": constants.ErrFailedToFetchOrganization})
 		return
 	}
 
@@ -338,16 +393,19 @@ func (h *OrganizationHandler) AssignOwner(c *gin.Context) {
 	var user db.User
 	if err := h.DB.Where("id = ? AND role = ?", ownerID, db.RoleOwner).First(&user).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
-			c.JSON(404, gin.H{"error": "owner not found"})
+			logger.Warnf("AssignOwner: Owner not found with ID %s", ownerID.String())
+			c.JSON(http.StatusNotFound, gin.H{"error": constants.ErrOwnerNotFound})
 			return
 		}
-		c.JSON(500, gin.H{"error": "failed to fetch owner"})
+		logger.Errorf("AssignOwner: Failed to fetch owner - %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": constants.ErrFailedToFetchOwner})
 		return
 	}
 
 	// Remove owner from any other organization first (allow reassignment)
 	if err := h.DB.Where("user_id = ?", ownerID).Delete(&db.OrgMember{}).Error; err != nil {
-		c.JSON(500, gin.H{"error": "failed to remove existing memberships"})
+		logger.Errorf("AssignOwner: Failed to remove existing memberships - %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": constants.ErrFailedToRemoveExistingMemberships})
 		return
 	}
 
@@ -360,11 +418,13 @@ func (h *OrganizationHandler) AssignOwner(c *gin.Context) {
 	}
 
 	if err := h.DB.Create(&member).Error; err != nil {
-		c.JSON(500, gin.H{"error": "failed to assign owner to organization"})
+		logger.Errorf("AssignOwner: Failed to assign owner to organization - %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": constants.ErrFailedToAssignOwnerToOrganization})
 		return
 	}
 
-	c.JSON(200, gin.H{"message": "owner successfully assigned to organization"})
+	logger.Infof("AssignOwner: Successfully assigned owner %s to organization %s", user.Email, org.Name)
+	c.JSON(http.StatusOK, gin.H{"message": constants.MsgOwnerSuccessfullyAssignedToOrganization})
 }
 
 // AssignMultipleUsers godoc
@@ -381,27 +441,35 @@ func (h *OrganizationHandler) AssignOwner(c *gin.Context) {
 // @Failure 500 {object} map[string]string
 // @Router /super-admin/organizations/{id}/assign-users [post]
 func (h *OrganizationHandler) AssignMultipleUsers(c *gin.Context) {
+	logger.Debug("AssignMultipleUsers: Starting multiple users assignment process")
+
 	orgID := c.Param("id")
 	orgUUID, err := uuid.Parse(orgID)
 	if err != nil {
-		c.JSON(400, gin.H{"error": "invalid organization ID"})
+		logger.Warnf("AssignMultipleUsers: Invalid organization ID format - %s", orgID)
+		c.JSON(http.StatusBadRequest, gin.H{"error": constants.ErrInvalidOrganizationID})
 		return
 	}
 
 	var req AssignMultipleUsersRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(400, gin.H{"error": err.Error()})
+		logger.Warnf("AssignMultipleUsers: Invalid request body - %v", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
+
+	logger.Debugf("AssignMultipleUsers: Assigning %d users to organization %s", len(req.UserIDs), orgUUID.String())
 
 	// Check if organization exists
 	var org db.Organization
 	if err := h.DB.Where("id = ?", orgUUID).First(&org).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
-			c.JSON(404, gin.H{"error": "organization not found"})
+			logger.Warnf("AssignMultipleUsers: Organization not found with ID %s", orgUUID.String())
+			c.JSON(http.StatusNotFound, gin.H{"error": constants.ErrOrganizationNotFound})
 			return
 		}
-		c.JSON(500, gin.H{"error": "failed to fetch organization"})
+		logger.Errorf("AssignMultipleUsers: Failed to fetch organization - %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": constants.ErrFailedToFetchOrganization})
 		return
 	}
 
@@ -411,25 +479,29 @@ func (h *OrganizationHandler) AssignMultipleUsers(c *gin.Context) {
 	for _, userIDStr := range req.UserIDs {
 		userUUID, err := uuid.Parse(userIDStr)
 		if err != nil {
-			c.JSON(400, gin.H{"error": "invalid user ID: " + userIDStr})
+			logger.Warnf("AssignMultipleUsers: Invalid user ID format - %s", userIDStr)
+			c.JSON(http.StatusBadRequest, gin.H{"error": constants.ErrInvalidUserID + ": " + userIDStr})
 			return
 		}
 		userUUIDs = append(userUUIDs, userUUID)
 	}
 
 	if err := h.DB.Where("id IN ?", userUUIDs).Find(&users).Error; err != nil {
-		c.JSON(500, gin.H{"error": "failed to fetch users"})
+		logger.Errorf("AssignMultipleUsers: Failed to fetch users - %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": constants.ErrFailedToFetchUsers})
 		return
 	}
 
 	if len(users) != len(req.UserIDs) {
-		c.JSON(400, gin.H{"error": "some users not found"})
+		logger.Warnf("AssignMultipleUsers: Some users not found. Expected %d, found %d", len(req.UserIDs), len(users))
+		c.JSON(http.StatusBadRequest, gin.H{"error": constants.ErrSomeUsersNotFound})
 		return
 	}
 
 	// Remove existing memberships for this organization
 	if err := h.DB.Where("org_id = ?", orgUUID).Delete(&db.OrgMember{}).Error; err != nil {
-		c.JSON(500, gin.H{"error": "failed to remove existing memberships"})
+		logger.Errorf("AssignMultipleUsers: Failed to remove existing memberships - %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": constants.ErrFailedToRemoveExistingMemberships})
 		return
 	}
 
@@ -446,11 +518,13 @@ func (h *OrganizationHandler) AssignMultipleUsers(c *gin.Context) {
 	}
 
 	if err := h.DB.Create(&orgMembers).Error; err != nil {
-		c.JSON(500, gin.H{"error": "failed to assign users to organization", "details": err.Error()})
+		logger.Errorf("AssignMultipleUsers: Failed to assign users to organization - %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": constants.ErrFailedToAssignUsersToOrganization, "details": err.Error()})
 		return
 	}
 
-	c.JSON(200, gin.H{"message": "users successfully assigned to organization"})
+	logger.Infof("AssignMultipleUsers: Successfully assigned %d users to organization %s", len(orgMembers), org.Name)
+	c.JSON(http.StatusOK, gin.H{"message": constants.MsgUsersSuccessfullyAssignedToOrganization})
 }
 
 // GetOrganizationMembers godoc
@@ -466,21 +540,28 @@ func (h *OrganizationHandler) AssignMultipleUsers(c *gin.Context) {
 // @Failure 500 {object} map[string]string
 // @Router /super-admin/organizations/{id}/members [get]
 func (h *OrganizationHandler) GetOrganizationMembers(c *gin.Context) {
+	logger.Debug("GetOrganizationMembers: Starting organization members retrieval process")
+
 	id := c.Param("id")
 	orgID, err := uuid.Parse(id)
 	if err != nil {
-		c.JSON(400, gin.H{"error": "invalid organization ID"})
+		logger.Warnf("GetOrganizationMembers: Invalid organization ID format - %s", id)
+		c.JSON(http.StatusBadRequest, gin.H{"error": constants.ErrInvalidOrganizationID})
 		return
 	}
+
+	logger.Debugf("GetOrganizationMembers: Fetching members for organization %s", orgID.String())
 
 	// Check if organization exists
 	var org db.Organization
 	if err := h.DB.Where("id = ?", orgID).First(&org).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
-			c.JSON(404, gin.H{"error": "organization not found"})
+			logger.Warnf("GetOrganizationMembers: Organization not found with ID %s", orgID.String())
+			c.JSON(http.StatusNotFound, gin.H{"error": constants.ErrOrganizationNotFound})
 			return
 		}
-		c.JSON(500, gin.H{"error": "failed to fetch organization"})
+		logger.Errorf("GetOrganizationMembers: Failed to fetch organization - %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": constants.ErrFailedToFetchOrganization})
 		return
 	}
 
@@ -500,11 +581,13 @@ func (h *OrganizationHandler) GetOrganizationMembers(c *gin.Context) {
 		Joins("JOIN users ON org_members.user_id = users.id").
 		Where("org_members.org_id = ?", orgID).
 		Scan(&members).Error; err != nil {
-		c.JSON(500, gin.H{"error": "failed to fetch organization members"})
+		logger.Errorf("GetOrganizationMembers: Failed to fetch organization members - %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": constants.ErrFailedToFetchOrganizationMembers})
 		return
 	}
 
-	c.JSON(200, gin.H{"members": members})
+	logger.Infof("GetOrganizationMembers: Successfully fetched %d members for organization %s", len(members), org.Name)
+	c.JSON(http.StatusOK, gin.H{"members": members})
 }
 
 // GetMyOrganization godoc
@@ -519,33 +602,42 @@ func (h *OrganizationHandler) GetOrganizationMembers(c *gin.Context) {
 // @Failure 500 {object} map[string]string
 // @Router /organizations/me [get]
 func (h *OrganizationHandler) GetMyOrganization(c *gin.Context) {
+	logger.Debug("GetMyOrganization: Starting my organization retrieval process")
+
 	// Get user ID from context
 	userID, exists := c.Get("uid")
 	if !exists {
-		c.JSON(401, gin.H{"error": "unauthorized"})
+		logger.Warn("GetMyOrganization: User ID not found in context")
+		c.JSON(http.StatusUnauthorized, gin.H{"error": constants.ErrUnauthorized})
 		return
 	}
 
 	userIDStr, ok := userID.(string)
 	if !ok {
-		c.JSON(401, gin.H{"error": "invalid user ID"})
+		logger.Warn("GetMyOrganization: Invalid user ID type in context")
+		c.JSON(http.StatusUnauthorized, gin.H{"error": constants.ErrInvalidUserID})
 		return
 	}
 
 	userUUID, err := uuid.Parse(userIDStr)
 	if err != nil {
-		c.JSON(400, gin.H{"error": "invalid user ID format"})
+		logger.Warnf("GetMyOrganization: Invalid user ID format - %s", userIDStr)
+		c.JSON(http.StatusBadRequest, gin.H{"error": constants.ErrInvalidUserIDFormat})
 		return
 	}
+
+	logger.Debugf("GetMyOrganization: Fetching organization for user %s", userUUID.String())
 
 	// Get user's organization membership
 	var orgMember db.OrgMember
 	if err := h.DB.Where("user_id = ?", userUUID).First(&orgMember).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
-			c.JSON(404, gin.H{"error": "organization not found"})
+			logger.Warnf("GetMyOrganization: Organization membership not found for user %s", userUUID.String())
+			c.JSON(http.StatusNotFound, gin.H{"error": constants.ErrOrganizationNotFound})
 			return
 		}
-		c.JSON(500, gin.H{"error": "failed to fetch organization membership"})
+		logger.Errorf("GetMyOrganization: Failed to fetch organization membership - %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": constants.ErrFailedToFetchOrganizationMembership})
 		return
 	}
 
@@ -553,10 +645,12 @@ func (h *OrganizationHandler) GetMyOrganization(c *gin.Context) {
 	var org db.Organization
 	if err := h.DB.Where("id = ?", orgMember.OrgID).First(&org).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
-			c.JSON(404, gin.H{"error": "organization not found"})
+			logger.Warnf("GetMyOrganization: Organization not found with ID %s", orgMember.OrgID.String())
+			c.JSON(http.StatusNotFound, gin.H{"error": constants.ErrOrganizationNotFound})
 			return
 		}
-		c.JSON(500, gin.H{"error": "failed to fetch organization"})
+		logger.Errorf("GetMyOrganization: Failed to fetch organization - %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": constants.ErrFailedToFetchOrganization})
 		return
 	}
 
@@ -571,7 +665,8 @@ func (h *OrganizationHandler) GetMyOrganization(c *gin.Context) {
 		RestaurantCount:    int(restaurantCount),
 	}
 
-	c.JSON(200, response)
+	logger.Infof("GetMyOrganization: Successfully retrieved organization %s for user %s", org.Name, userUUID.String())
+	c.JSON(http.StatusOK, response)
 }
 
 // UpdateMyOrganization godoc
@@ -588,39 +683,49 @@ func (h *OrganizationHandler) GetMyOrganization(c *gin.Context) {
 // @Failure 500 {object} map[string]string
 // @Router /organizations/me [put]
 func (h *OrganizationHandler) UpdateMyOrganization(c *gin.Context) {
+	logger.Debug("UpdateMyOrganization: Starting my organization update process")
+
 	// Get user ID from context
 	userID, exists := c.Get("uid")
 	if !exists {
-		c.JSON(401, gin.H{"error": "unauthorized"})
+		logger.Warn("UpdateMyOrganization: User ID not found in context")
+		c.JSON(http.StatusUnauthorized, gin.H{"error": constants.ErrUnauthorized})
 		return
 	}
 
 	userIDStr, ok := userID.(string)
 	if !ok {
-		c.JSON(401, gin.H{"error": "invalid user ID"})
+		logger.Warn("UpdateMyOrganization: Invalid user ID type in context")
+		c.JSON(http.StatusUnauthorized, gin.H{"error": constants.ErrInvalidUserID})
 		return
 	}
 
 	userUUID, err := uuid.Parse(userIDStr)
 	if err != nil {
-		c.JSON(400, gin.H{"error": "invalid user ID format"})
+		logger.Warnf("UpdateMyOrganization: Invalid user ID format - %s", userIDStr)
+		c.JSON(http.StatusBadRequest, gin.H{"error": constants.ErrInvalidUserIDFormat})
 		return
 	}
 
 	var req UpdateOrganizationRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(400, gin.H{"error": err.Error()})
+		logger.Warnf("UpdateMyOrganization: Invalid request body - %v", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
+
+	logger.Debugf("UpdateMyOrganization: Updating organization for user %s", userUUID.String())
 
 	// Get user's organization membership
 	var orgMember db.OrgMember
 	if err := h.DB.Where("user_id = ?", userUUID).First(&orgMember).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
-			c.JSON(404, gin.H{"error": "organization not found"})
+			logger.Warnf("UpdateMyOrganization: Organization membership not found for user %s", userUUID.String())
+			c.JSON(http.StatusNotFound, gin.H{"error": constants.ErrOrganizationNotFound})
 			return
 		}
-		c.JSON(500, gin.H{"error": "failed to fetch organization membership"})
+		logger.Errorf("UpdateMyOrganization: Failed to fetch organization membership - %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": constants.ErrFailedToFetchOrganizationMembership})
 		return
 	}
 
@@ -628,10 +733,12 @@ func (h *OrganizationHandler) UpdateMyOrganization(c *gin.Context) {
 	var org db.Organization
 	if err := h.DB.Where("id = ?", orgMember.OrgID).First(&org).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
-			c.JSON(404, gin.H{"error": "organization not found"})
+			logger.Warnf("UpdateMyOrganization: Organization not found with ID %s", orgMember.OrgID.String())
+			c.JSON(http.StatusNotFound, gin.H{"error": constants.ErrOrganizationNotFound})
 			return
 		}
-		c.JSON(500, gin.H{"error": "failed to fetch organization"})
+		logger.Errorf("UpdateMyOrganization: Failed to fetch organization - %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": constants.ErrFailedToFetchOrganization})
 		return
 	}
 
@@ -641,7 +748,8 @@ func (h *OrganizationHandler) UpdateMyOrganization(c *gin.Context) {
 	}
 
 	if err := h.DB.Save(&org).Error; err != nil {
-		c.JSON(500, gin.H{"error": "failed to update organization"})
+		logger.Errorf("UpdateMyOrganization: Failed to update organization in database - %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": constants.ErrFailedToUpdateOrganization})
 		return
 	}
 
@@ -656,5 +764,6 @@ func (h *OrganizationHandler) UpdateMyOrganization(c *gin.Context) {
 		RestaurantCount:    int(restaurantCount),
 	}
 
-	c.JSON(200, response)
+	logger.Infof("UpdateMyOrganization: Successfully updated organization %s for user %s", org.Name, userUUID.String())
+	c.JSON(http.StatusOK, response)
 }

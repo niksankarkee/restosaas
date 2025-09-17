@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
+import { STORAGE_KEYS, API_ENDPOINTS } from '@/lib/constants';
 
 interface User {
   id: string;
@@ -29,14 +30,14 @@ export function RoleGuard({
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        const token = localStorage.getItem('authToken');
+        const token = localStorage.getItem(STORAGE_KEYS.AUTH_TOKEN);
         if (!token) {
           router.push(redirectTo);
           return;
         }
 
         // Get user info from token or make API call
-        const response = await api.get('/users/me');
+        const response = await api.get(API_ENDPOINTS.ME);
         const userData = response.data;
 
         if (!allowedRoles.includes(userData.role)) {
@@ -47,7 +48,7 @@ export function RoleGuard({
         setUser(userData);
       } catch (error) {
         console.error('Auth check failed:', error);
-        localStorage.removeItem('authToken');
+        localStorage.removeItem(STORAGE_KEYS.AUTH_TOKEN);
         router.push(redirectTo);
       } finally {
         setIsLoading(false);

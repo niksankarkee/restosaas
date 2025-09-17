@@ -9,6 +9,7 @@ import {
 } from 'react';
 import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
+import { API_ENDPOINTS, STORAGE_KEYS, USER_ROLES } from '@/lib/constants';
 
 interface User {
   id: string;
@@ -40,18 +41,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     try {
       setIsChecking(true);
-      const token = localStorage.getItem('authToken');
+      const token = localStorage.getItem(STORAGE_KEYS.AUTH_TOKEN);
       if (!token) {
         setUser(null);
         return;
       }
 
       // Try to get user info from API
-      const response = await api.get('/users/me');
+      const response = await api.get(API_ENDPOINTS.ME);
       setUser(response.data);
     } catch (error) {
       console.error('Auth check failed:', error);
-      localStorage.removeItem('authToken');
+      localStorage.removeItem(STORAGE_KEYS.AUTH_TOKEN);
       setUser(null);
     } finally {
       setIsLoading(false);
@@ -61,10 +62,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = async (email: string, password: string) => {
     try {
-      const response = await api.post('/auth/login', { email, password });
+      const response = await api.post(API_ENDPOINTS.LOGIN, { email, password });
       const { token, ...userData } = response.data;
 
-      localStorage.setItem('authToken', token);
+      localStorage.setItem(STORAGE_KEYS.AUTH_TOKEN, token);
       setUser(userData);
     } catch (error) {
       throw error;
@@ -72,7 +73,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const logout = () => {
-    localStorage.removeItem('authToken');
+    localStorage.removeItem(STORAGE_KEYS.AUTH_TOKEN);
     setUser(null);
     router.push('/');
   };
