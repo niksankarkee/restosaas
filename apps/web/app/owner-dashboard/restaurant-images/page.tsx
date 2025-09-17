@@ -30,13 +30,18 @@ function RestaurantImagesPageContent() {
   const [images, setImages] = useState<RestaurantImage[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isUploading, setIsUploading] = useState(false);
+  const [isFetching, setIsFetching] = useState(false);
 
   useEffect(() => {
     fetchRestaurant();
   }, []);
 
   const fetchRestaurant = async () => {
+    // Prevent duplicate calls
+    if (isFetching) return;
+
     try {
+      setIsFetching(true);
       setIsLoading(true);
       const response = await api.get('/owner/restaurants/me');
       setRestaurant(response.data);
@@ -45,6 +50,7 @@ function RestaurantImagesPageContent() {
       console.error('Failed to fetch restaurant:', error);
     } finally {
       setIsLoading(false);
+      setIsFetching(false);
     }
   };
 

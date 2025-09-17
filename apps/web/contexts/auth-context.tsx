@@ -31,10 +31,15 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isChecking, setIsChecking] = useState(false);
   const router = useRouter();
 
   const checkAuth = async () => {
+    // Prevent duplicate calls
+    if (isChecking) return;
+
     try {
+      setIsChecking(true);
       const token = localStorage.getItem('authToken');
       if (!token) {
         setUser(null);
@@ -50,6 +55,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(null);
     } finally {
       setIsLoading(false);
+      setIsChecking(false);
     }
   };
 
@@ -73,6 +79,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     checkAuth();
+
+    // Cleanup function to prevent memory leaks
+    return () => {
+      setIsChecking(false);
+    };
   }, []);
 
   return (
