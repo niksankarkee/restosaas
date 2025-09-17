@@ -69,7 +69,7 @@ export function Navbar() {
                   {/* Only SUPER_ADMIN can see Super Admin */}
                   {user.role === 'SUPER_ADMIN' && (
                     <Link
-                      href='/super-admin'
+                      href='/super-admin-dashboard'
                       className='text-gray-600 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium'
                     >
                       Super Admin

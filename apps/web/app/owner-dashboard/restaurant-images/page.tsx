@@ -46,8 +46,18 @@ function RestaurantImagesPageContent() {
       setIsFetching(true);
       setIsLoading(true);
       const response = await api.get('/owner/restaurants/me');
-      setRestaurant(response.data);
-      setImages(response.data.images || []);
+      const restaurants = response.data.restaurants || [];
+
+      if (restaurants.length === 0) {
+        setRestaurant(null);
+        setImages([]);
+        return;
+      }
+
+      // For now, use the first restaurant. In the future, we can add restaurant selection
+      const restaurant = restaurants[0];
+      setRestaurant(restaurant);
+      setImages(restaurant.images || []);
     } catch (error) {
       console.error('Failed to fetch restaurant:', error);
     } finally {

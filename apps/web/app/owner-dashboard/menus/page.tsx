@@ -77,7 +77,16 @@ function MenusPageContent() {
     try {
       setIsLoading(true);
       const restaurantResponse = await api.get('/owner/restaurants/me');
-      const restaurantId = restaurantResponse.data.id;
+      const restaurants = restaurantResponse.data.restaurants || [];
+
+      if (restaurants.length === 0) {
+        setCourses([]);
+        setMenus([]);
+        return;
+      }
+
+      // For now, use the first restaurant. In the future, we can add restaurant selection
+      const restaurantId = restaurants[0].id;
 
       // Fetch courses and menus in parallel
       const [coursesResponse, menusResponse] = await Promise.all([
@@ -99,7 +108,10 @@ function MenusPageContent() {
   const handleCreateCourse = async (data: any) => {
     try {
       const restaurantResponse = await api.get('/owner/restaurants/me');
-      const restaurantId = restaurantResponse.data.id;
+      const restaurants = restaurantResponse.data.restaurants || [];
+      if (restaurants.length === 0) return;
+
+      const restaurantId = restaurants[0].id;
 
       const response = await api.post(
         `/owner/restaurants/${restaurantId}/courses`,
@@ -115,7 +127,10 @@ function MenusPageContent() {
   const handleCreateMenu = async (data: any) => {
     try {
       const restaurantResponse = await api.get('/owner/restaurants/me');
-      const restaurantId = restaurantResponse.data.id;
+      const restaurants = restaurantResponse.data.restaurants || [];
+      if (restaurants.length === 0) return;
+
+      const restaurantId = restaurants[0].id;
 
       const response = await api.post(
         `/owner/restaurants/${restaurantId}/menus`,
@@ -133,7 +148,10 @@ function MenusPageContent() {
 
     try {
       const restaurantResponse = await api.get('/owner/restaurants/me');
-      const restaurantId = restaurantResponse.data.id;
+      const restaurants = restaurantResponse.data.restaurants || [];
+      if (restaurants.length === 0) return;
+
+      const restaurantId = restaurants[0].id;
 
       const response = await api.put(
         `/owner/restaurants/${restaurantId}/courses/${editingCourse.id}`,
@@ -154,7 +172,10 @@ function MenusPageContent() {
 
     try {
       const restaurantResponse = await api.get('/owner/restaurants/me');
-      const restaurantId = restaurantResponse.data.id;
+      const restaurants = restaurantResponse.data.restaurants || [];
+      if (restaurants.length === 0) return;
+
+      const restaurantId = restaurants[0].id;
 
       const response = await api.put(
         `/owner/restaurants/${restaurantId}/menus/${editingMenu.id}`,
@@ -175,7 +196,10 @@ function MenusPageContent() {
 
     try {
       const restaurantResponse = await api.get('/owner/restaurants/me');
-      const restaurantId = restaurantResponse.data.id;
+      const restaurants = restaurantResponse.data.restaurants || [];
+      if (restaurants.length === 0) return;
+
+      const restaurantId = restaurants[0].id;
 
       await api.delete(
         `/owner/restaurants/${restaurantId}/courses/${courseId}`
@@ -191,7 +215,10 @@ function MenusPageContent() {
 
     try {
       const restaurantResponse = await api.get('/owner/restaurants/me');
-      const restaurantId = restaurantResponse.data.id;
+      const restaurants = restaurantResponse.data.restaurants || [];
+      if (restaurants.length === 0) return;
+
+      const restaurantId = restaurants[0].id;
 
       await api.delete(`/owner/restaurants/${restaurantId}/menus/${menuId}`);
       setMenus((prev) => prev.filter((m) => m.id !== menuId));

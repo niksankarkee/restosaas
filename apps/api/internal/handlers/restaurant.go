@@ -64,21 +64,40 @@ type ImageRequest struct {
 
 // RestaurantResponse represents a restaurant in API responses
 type RestaurantResponse struct {
-	ID          string    `json:"id"`
-	Slug        string    `json:"slug"`
-	Name        string    `json:"name"`
-	Slogan      string    `json:"slogan"`
-	Place       string    `json:"place"`
-	Genre       string    `json:"genre"`
-	Budget      string    `json:"budget"`
-	Title       string    `json:"title"`
-	Description string    `json:"description"`
-	Address     string    `json:"address"`
-	Phone       string    `json:"phone"`
-	Capacity    int       `json:"capacity"`
-	IsOpen      bool      `json:"isOpen"`
-	CreatedAt   time.Time `json:"createdAt"`
-	UpdatedAt   time.Time `json:"updatedAt"`
+	ID          string                `json:"id"`
+	Slug        string                `json:"slug"`
+	Name        string                `json:"name"`
+	Slogan      string                `json:"slogan"`
+	Place       string                `json:"place"`
+	Genre       string                `json:"genre"`
+	Budget      string                `json:"budget"`
+	Title       string                `json:"title"`
+	Description string                `json:"description"`
+	Address     string                `json:"address"`
+	Phone       string                `json:"phone"`
+	Capacity    int                   `json:"capacity"`
+	IsOpen      bool                  `json:"isOpen"`
+	MainImageID *string               `json:"mainImageId,omitempty"`
+	OpenHours   []OpeningHourResponse `json:"openHours,omitempty"`
+	Images      []ImageResponse       `json:"images,omitempty"`
+	CreatedAt   time.Time             `json:"createdAt"`
+	UpdatedAt   time.Time             `json:"updatedAt"`
+}
+
+type OpeningHourResponse struct {
+	ID        string `json:"id"`
+	Weekday   int    `json:"weekday"`
+	OpenTime  string `json:"openTime"`
+	CloseTime string `json:"closeTime"`
+	IsClosed  bool   `json:"isClosed"`
+}
+
+type ImageResponse struct {
+	ID           string `json:"id"`
+	URL          string `json:"url"`
+	Alt          string `json:"alt"`
+	IsMain       bool   `json:"isMain"`
+	DisplayOrder int    `json:"displayOrder"`
 }
 
 // CreateMenuRequest represents the request to create a menu
@@ -106,15 +125,15 @@ func (h *RestaurantHandler) CreateRestaurant(c *gin.Context) {
 		return
 	}
 
-	// Check if restaurant already exists for this organization
-	var existingRestaurant db.Restaurant
-	if err := h.DB.Where("org_id = ?", orgMember.OrgID).First(&existingRestaurant).Error; err == nil {
-		c.JSON(409, gin.H{"error": "restaurant already exists for this organization"})
-		return
-	}
-
 	// Generate slug from name
 	slug := strings.ToLower(strings.ReplaceAll(req.Name, " ", "-"))
+
+	// Check if restaurant with same slug already exists
+	var existingRestaurant db.Restaurant
+	if err := h.DB.Where("slug = ?", slug).First(&existingRestaurant).Error; err == nil {
+		c.JSON(409, gin.H{"error": "restaurant with this name already exists"})
+		return
+	}
 
 	// Create restaurant
 	restaurant := db.Restaurant{
@@ -178,36 +197,66 @@ func (h *RestaurantHandler) GetMyRestaurant(c *gin.Context) {
 		return
 	}
 
-	// Get restaurant
-	var restaurant db.Restaurant
-	if err := h.DB.Where("org_id = ?", orgMember.OrgID).First(&restaurant).Error; err != nil {
-		if err == gorm.ErrRecordNotFound {
-			c.JSON(404, gin.H{"error": "restaurant not found"})
-			return
-		}
-		c.JSON(500, gin.H{"error": "failed to fetch restaurant"})
+	// Get all restaurants for the organization
+	var restaurants []db.Restaurant
+	if err := h.DB.Where("org_id = ?", orgMember.OrgID).Preload("Images").Preload("OpenHours").Preload("Menus").Preload("Courses").Find(&restaurants).Error; err != nil {
+		c.JSON(500, gin.H{"error": "failed to fetch restaurants"})
 		return
 	}
 
-	response := RestaurantResponse{
-		ID:          restaurant.ID.String(),
-		Slug:        restaurant.Slug,
-		Name:        restaurant.Name,
-		Slogan:      restaurant.Slogan,
-		Place:       restaurant.Place,
-		Genre:       restaurant.Genre,
-		Budget:      restaurant.Budget,
-		Title:       restaurant.Title,
-		Description: restaurant.Description,
-		Address:     restaurant.Address,
-		Phone:       restaurant.Phone,
-		Capacity:    restaurant.Capacity,
-		IsOpen:      restaurant.IsOpen,
-		CreatedAt:   restaurant.CreatedAt,
-		UpdatedAt:   restaurant.UpdatedAt,
+	// Convert to response format
+	var response []RestaurantResponse
+	for _, restaurant := range restaurants {
+		mainImageID := ""
+		if restaurant.MainImageID != nil {
+			mainImageID = restaurant.MainImageID.String()
+		}
+
+		restaurantResponse := RestaurantResponse{
+			ID:          restaurant.ID.String(),
+			Slug:        restaurant.Slug,
+			Name:        restaurant.Name,
+			Slogan:      restaurant.Slogan,
+			Place:       restaurant.Place,
+			Genre:       restaurant.Genre,
+			Budget:      restaurant.Budget,
+			Title:       restaurant.Title,
+			Description: restaurant.Description,
+			Address:     restaurant.Address,
+			Phone:       restaurant.Phone,
+			Capacity:    restaurant.Capacity,
+			IsOpen:      restaurant.IsOpen,
+			MainImageID: &mainImageID,
+			CreatedAt:   restaurant.CreatedAt,
+			UpdatedAt:   restaurant.UpdatedAt,
+		}
+
+		// Convert opening hours
+		for _, hour := range restaurant.OpenHours {
+			restaurantResponse.OpenHours = append(restaurantResponse.OpenHours, OpeningHourResponse{
+				ID:        hour.ID.String(),
+				Weekday:   hour.Weekday,
+				OpenTime:  hour.OpenTime,
+				CloseTime: hour.CloseTime,
+				IsClosed:  hour.IsClosed,
+			})
+		}
+
+		// Convert images
+		for _, img := range restaurant.Images {
+			restaurantResponse.Images = append(restaurantResponse.Images, ImageResponse{
+				ID:           img.ID.String(),
+				URL:          img.URL,
+				Alt:          img.Alt,
+				IsMain:       img.IsMain,
+				DisplayOrder: img.DisplayOrder,
+			})
+		}
+
+		response = append(response, restaurantResponse)
 	}
 
-	c.JSON(200, response)
+	c.JSON(200, gin.H{"restaurants": response})
 }
 
 // PUT /api/owner/restaurants/:id - Update restaurant (OWNER or SUPER_ADMIN)
@@ -742,4 +791,171 @@ func (h *RestaurantHandler) SetMainImage(c *gin.Context) {
 		"message": "main image set successfully",
 		"imageId": imageID,
 	})
+}
+
+// CreateRestaurantForOrganization godoc
+// @Summary Create restaurant for organization (Super Admin only)
+// @Description Create a new restaurant for a specific organization (only for super admins)
+// @Tags restaurants
+// @Accept json
+// @Produce json
+// @Param organizationId path string true "Organization ID"
+// @Param restaurant body CreateRestaurantRequest true "Restaurant information"
+// @Success 201 {object} RestaurantResponse
+// @Failure 400 {object} map[string]string
+// @Failure 404 {object} map[string]string
+// @Failure 409 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /super-admin/organizations/{id}/restaurants [post]
+func (h *RestaurantHandler) CreateRestaurantForOrganization(c *gin.Context) {
+	organizationID := c.Param("id")
+	orgUUID, err := uuid.Parse(organizationID)
+	if err != nil {
+		c.JSON(400, gin.H{"error": "invalid organization ID"})
+		return
+	}
+
+	var req CreateRestaurantRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(400, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Check if organization exists
+	var org db.Organization
+	if err := h.DB.Where("id = ?", orgUUID).First(&org).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			c.JSON(404, gin.H{"error": "organization not found"})
+			return
+		}
+		c.JSON(500, gin.H{"error": "failed to fetch organization"})
+		return
+	}
+
+	// Generate slug from name
+	slug := strings.ToLower(strings.ReplaceAll(req.Name, " ", "-"))
+
+	// Check if restaurant with same slug already exists
+	var existingRestaurant db.Restaurant
+	if err := h.DB.Where("slug = ?", slug).First(&existingRestaurant).Error; err == nil {
+		c.JSON(409, gin.H{"error": "restaurant with this name already exists"})
+		return
+	}
+
+	// Create restaurant
+	restaurant := db.Restaurant{
+		ID:          uuid.New(),
+		OrgID:       orgUUID,
+		Slug:        slug,
+		Name:        req.Name,
+		Slogan:      req.Slogan,
+		Place:       req.Place,
+		Genre:       req.Genre,
+		Budget:      req.Budget,
+		Title:       req.Title,
+		Description: req.Description,
+		Address:     req.Address,
+		Phone:       req.Phone,
+		Capacity:    req.Capacity,
+		IsOpen:      req.IsOpen,
+		CreatedAt:   time.Now(),
+		UpdatedAt:   time.Now(),
+	}
+
+	if err := h.DB.Create(&restaurant).Error; err != nil {
+		c.JSON(500, gin.H{"error": "failed to create restaurant"})
+		return
+	}
+
+	// Get owner information
+	var owner db.User
+	h.DB.Table("org_members").
+		Select("users.*").
+		Joins("JOIN users ON org_members.user_id = users.id").
+		Where("org_members.org_id = ? AND org_members.role = ?", orgUUID, db.RoleOwner).
+		First(&owner)
+
+	response := struct {
+		ID          string    `json:"id"`
+		Slug        string    `json:"slug"`
+		Name        string    `json:"name"`
+		Slogan      string    `json:"slogan"`
+		Place       string    `json:"place"`
+		Genre       string    `json:"genre"`
+		Budget      string    `json:"budget"`
+		Title       string    `json:"title"`
+		Description string    `json:"description"`
+		Address     string    `json:"address"`
+		Phone       string    `json:"phone"`
+		Capacity    int       `json:"capacity"`
+		IsOpen      bool      `json:"isOpen"`
+		CreatedAt   time.Time `json:"createdAt"`
+		UpdatedAt   time.Time `json:"updatedAt"`
+		OrgID       string    `json:"orgId"`
+		OrgName     string    `json:"orgName"`
+		OwnerName   string    `json:"ownerName"`
+		OwnerEmail  string    `json:"ownerEmail"`
+	}{
+		ID:          restaurant.ID.String(),
+		Slug:        restaurant.Slug,
+		Name:        restaurant.Name,
+		Slogan:      restaurant.Slogan,
+		Place:       restaurant.Place,
+		Genre:       restaurant.Genre,
+		Budget:      restaurant.Budget,
+		Title:       restaurant.Title,
+		Description: restaurant.Description,
+		Address:     restaurant.Address,
+		Phone:       restaurant.Phone,
+		Capacity:    restaurant.Capacity,
+		IsOpen:      restaurant.IsOpen,
+		CreatedAt:   restaurant.CreatedAt,
+		UpdatedAt:   restaurant.UpdatedAt,
+		OrgID:       org.ID.String(),
+		OrgName:     org.Name,
+		OwnerName:   owner.DisplayName,
+		OwnerEmail:  owner.Email,
+	}
+
+	c.JSON(201, response)
+}
+
+// DeleteRestaurantByID godoc
+// @Summary Delete restaurant by ID (Super Admin only)
+// @Description Delete a restaurant by ID (super admin can delete any restaurant)
+// @Tags restaurants
+// @Accept json
+// @Produce json
+// @Param id path string true "Restaurant ID"
+// @Success 204 "No Content"
+// @Failure 400 {object} map[string]string
+// @Failure 404 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /super-admin/restaurants/{id} [delete]
+func (h *RestaurantHandler) DeleteRestaurantByID(c *gin.Context) {
+	restaurantID := c.Param("id")
+	restaurantUUID, err := uuid.Parse(restaurantID)
+	if err != nil {
+		c.JSON(400, gin.H{"error": "invalid restaurant ID"})
+		return
+	}
+
+	// Get restaurant
+	var restaurant db.Restaurant
+	if err := h.DB.Where("id = ?", restaurantUUID).First(&restaurant).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			c.JSON(404, gin.H{"error": "restaurant not found"})
+			return
+		}
+		c.JSON(500, gin.H{"error": "failed to fetch restaurant"})
+		return
+	}
+
+	// Delete restaurant (cascade will handle related records)
+	if err := h.DB.Delete(&restaurant).Error; err != nil {
+		c.JSON(500, gin.H{"error": "failed to delete restaurant"})
+		return
+	}
+
+	c.Status(http.StatusNoContent)
 }

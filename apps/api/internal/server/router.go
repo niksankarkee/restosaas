@@ -102,31 +102,39 @@ func Mount(r *gin.Engine, gdb *gorm.DB) {
 	superAdminGroup := r.Group("/api/super-admin")
 	superAdminGroup.Use(auth.RequireAuth(string(db.RoleSuper)), auth.AddTokenToResponse())
 	{
-		superAdminGroup.POST("/owners", superAdmin.CreateOwner)               // Create owner
-		superAdminGroup.GET("/owners", superAdmin.ListOwners)                 // List all owners
-		superAdminGroup.GET("/users", superAdmin.ListAllUsers)                // List all users
-		superAdminGroup.PUT("/users/:id", superAdmin.UpdateUser)              // Update user
-		superAdminGroup.DELETE("/users/:id", superAdmin.DeleteUser)           // Delete user
-		superAdminGroup.GET("/restaurants", restaurant.ListAllRestaurants)    // List all restaurants
-		superAdminGroup.GET("/restaurants/:id", restaurant.GetRestaurantByID) // Get restaurant by ID
-		superAdminGroup.PUT("/restaurants/:id", restaurant.UpdateRestaurant)  // Update restaurant
-	}
-
-	// Organization management routes (OWNER only)
-	organizationGroup := r.Group("/api/organizations")
-	organizationGroup.Use(auth.RequireAuth(string(db.RoleOwner), string(db.RoleSuper)), auth.AddTokenToResponse())
-	{
-		organizationGroup.POST("", organization.CreateOrganization)     // Create organization
-		organizationGroup.GET("/me", organization.GetMyOrganization)    // Get my organization
-		organizationGroup.PUT("/me", organization.UpdateMyOrganization) // Update my organization
+		superAdminGroup.POST("/owners", superAdmin.CreateOwner)                     // Create owner
+		superAdminGroup.GET("/owners", superAdmin.ListOwners)                       // List all owners
+		superAdminGroup.POST("/users", usr.CreateUser)                              // Create user
+		superAdminGroup.GET("/users", superAdmin.ListAllUsers)                      // List all users
+		superAdminGroup.PUT("/users/:id", superAdmin.UpdateUser)                    // Update user
+		superAdminGroup.DELETE("/users/:id", superAdmin.DeleteUser)                 // Delete user
+		superAdminGroup.GET("/restaurants", restaurant.ListAllRestaurants)          // List all restaurants
+		superAdminGroup.GET("/restaurants/:id", restaurant.GetRestaurantByID)       // Get restaurant by ID
+		superAdminGroup.PUT("/restaurants/:id", restaurant.UpdateRestaurant)        // Update restaurant
+		superAdminGroup.DELETE("/restaurants/:id", restaurant.DeleteRestaurantByID) // Delete restaurant
 	}
 
 	// Super Admin organization routes (SUPER_ADMIN only)
 	superAdminOrgGroup := r.Group("/api/super-admin/organizations")
 	superAdminOrgGroup.Use(auth.RequireAuth(string(db.RoleSuper)), auth.AddTokenToResponse())
 	{
-		superAdminOrgGroup.GET("", organization.ListOrganizations)    // List all organizations
-		superAdminOrgGroup.PUT("/:id", superAdmin.UpdateOrganization) // Update organization
+		superAdminOrgGroup.POST("", organization.CreateOrganization)                            // Create organization
+		superAdminOrgGroup.GET("", organization.ListOrganizations)                              // List all organizations
+		superAdminOrgGroup.GET("/:id", organization.GetOrganization)                            // Get organization by ID
+		superAdminOrgGroup.PUT("/:id", organization.UpdateOrganization)                         // Update organization
+		superAdminOrgGroup.DELETE("/:id", organization.DeleteOrganization)                      // Delete organization
+		superAdminOrgGroup.POST("/:id/assign-owner", organization.AssignOwner)                  // Assign owner to organization
+		superAdminOrgGroup.POST("/:id/assign-users", organization.AssignMultipleUsers)          // Assign multiple users to organization
+		superAdminOrgGroup.GET("/:id/members", organization.GetOrganizationMembers)             // Get organization members
+		superAdminOrgGroup.POST("/:id/restaurants", restaurant.CreateRestaurantForOrganization) // Create restaurant for organization
+	}
+
+	// Organization management routes (OWNER only)
+	organizationGroup := r.Group("/api/organizations")
+	organizationGroup.Use(auth.RequireAuth(string(db.RoleOwner), string(db.RoleSuper)), auth.AddTokenToResponse())
+	{
+		organizationGroup.GET("/me", organization.GetMyOrganization)    // Get my organization
+		organizationGroup.PUT("/me", organization.UpdateMyOrganization) // Update my organization
 	}
 
 	// Restaurant management routes (OWNER only)

@@ -93,44 +93,10 @@ func (h *UserHandler) CreateUser(c *gin.Context) {
 		CreatedAt:   time.Now(),
 	}
 
-	// If user is an OWNER, create organization and org member in a transaction
-	if db.Role(req.Role) == db.RoleOwner {
-		org := db.Organization{
-			ID:        uuid.New(),
-			Name:      req.DisplayName + "'s Organization", // Default org name
-			CreatedAt: time.Now(),
-		}
-
-		orgMember := db.OrgMember{
-			ID:     uuid.New(),
-			UserID: user.ID,
-			OrgID:  org.ID,
-			Role:   db.RoleOwner,
-		}
-
-		err := h.DB.Transaction(func(tx *gorm.DB) error {
-			if err := tx.Create(&user).Error; err != nil {
-				return err
-			}
-			if err := tx.Create(&org).Error; err != nil {
-				return err
-			}
-			if err := tx.Create(&orgMember).Error; err != nil {
-				return err
-			}
-			return nil
-		})
-
-		if err != nil {
-			c.JSON(500, gin.H{"error": "failed to create user and organization", "details": err.Error()})
-			return
-		}
-	} else {
-		// For non-OWNER users, just create the user
-		if err := h.DB.Create(&user).Error; err != nil {
-			c.JSON(500, gin.H{"error": "failed to create user", "details": err.Error()})
-			return
-		}
+	// Create user (organizations will be assigned separately by super admins)
+	if err := h.DB.Create(&user).Error; err != nil {
+		c.JSON(500, gin.H{"error": "failed to create user", "details": err.Error()})
+		return
 	}
 
 	// Generate JWT token

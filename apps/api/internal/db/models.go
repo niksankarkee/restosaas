@@ -77,7 +77,7 @@ type OrgMember struct {
 
 type Restaurant struct {
 	ID          uuid.UUID `gorm:"type:uuid;primaryKey"`
-	OrgID       uuid.UUID `gorm:"type:uuid;uniqueIndex;not null"`
+	OrgID       uuid.UUID `gorm:"type:uuid;index;not null"`
 	Slug        string    `gorm:"uniqueIndex;not null"`
 	Name        string    `gorm:"not null"`
 	Slogan      string    `gorm:"not null"`

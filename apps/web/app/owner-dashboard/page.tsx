@@ -17,9 +17,21 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
+import { Badge } from '@/components/ui/badge';
 import { EnhancedRestaurantForm } from '@/components/forms/enhanced-restaurant-form';
 import { api } from '@/lib/api';
 import Link from 'next/link';
+import {
+  Edit,
+  MapPin,
+  Clock,
+  Users,
+  Star,
+  Image as ImageIcon,
+  Utensils,
+  Calendar,
+  MessageSquare,
+} from 'lucide-react';
 
 interface Restaurant {
   id: string;
@@ -32,47 +44,115 @@ interface Restaurant {
   budget?: string;
   isOpen?: boolean;
   title?: string;
+  address?: string;
+  phone?: string;
+  capacity?: number;
+  createdAt: string;
+  updatedAt: string;
+  mainImageId?: string;
+  images?: Image[];
+  openHours?: OpeningHour[];
+  menus?: Menu[];
+  courses?: Course[];
+}
+
+interface Image {
+  id: string;
+  url: string;
+  alt: string;
+  isMain: boolean;
+  displayOrder: number;
+}
+
+interface OpeningHour {
+  id: string;
+  weekday: number;
+  openTime: string;
+  closeTime: string;
+  isClosed: boolean;
+}
+
+interface Menu {
+  id: string;
+  name: string;
+  shortDesc: string;
+  imageUrl: string;
+  price: number;
+  type: 'DRINK' | 'FOOD';
+  mealType: 'LUNCH' | 'DINNER' | 'BOTH';
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface Course {
+  id: string;
+  title: string;
+  description: string;
+  imageUrl: string;
+  coursePrice: number;
+  originalPrice?: number;
+  numberOfItems: number;
+  stayTime: number;
+  courseContent: string;
+  precautions: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 function OwnerDashboardContent() {
-  const [restaurant, setRestaurant] = useState<Restaurant | null>(null);
+  const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [editingRestaurant, setEditingRestaurant] = useState<Restaurant | null>(
+    null
+  );
 
   useEffect(() => {
-    fetchRestaurant();
+    fetchRestaurants();
   }, []);
 
-  const fetchRestaurant = async () => {
+  const fetchRestaurants = async () => {
     try {
       setIsLoading(true);
       const response = await api.get('/owner/restaurants/me');
-      setRestaurant(response.data);
+      setRestaurants(response.data.restaurants || []);
     } catch (error) {
-      console.error('Failed to fetch restaurant:', error);
+      console.error('Failed to fetch restaurants:', error);
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleRestaurantCreated = (data: Restaurant) => {
-    setRestaurant(data);
+    setRestaurants((prev) => [...prev, data]);
     setIsCreateDialogOpen(false);
   };
 
   const handleRestaurantUpdated = (data: Restaurant) => {
-    setRestaurant(data);
+    setRestaurants((prev) =>
+      prev.map((rest) => (rest.id === data.id ? data : rest))
+    );
     setIsEditDialogOpen(false);
+    setEditingRestaurant(null);
+  };
+
+  const handleEditRestaurant = (restaurant: Restaurant) => {
+    setEditingRestaurant(restaurant);
+    setIsEditDialogOpen(true);
   };
 
   if (isLoading) {
     return (
       <div className='p-6'>
-        <div className='max-w-6xl mx-auto'>
+        <div className='max-w-7xl mx-auto'>
           <div className='animate-pulse'>
             <div className='h-8 bg-gray-200 rounded w-1/4 mb-6'></div>
-            <div className='h-64 bg-gray-200 rounded'></div>
+            <div className='grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6'>
+              {[1, 2, 3].map((i) => (
+                <div key={i} className='h-64 bg-gray-200 rounded'></div>
+              ))}
+            </div>
           </div>
         </div>
       </div>
@@ -81,36 +161,17 @@ function OwnerDashboardContent() {
 
   return (
     <div className='p-6'>
-      <div className='max-w-6xl mx-auto'>
+      <div className='max-w-7xl mx-auto'>
         <div className='flex justify-between items-center mb-6'>
           <div>
             <h1 className='text-3xl font-bold text-gray-900'>
               Owner Dashboard
             </h1>
             <p className='text-gray-600 mt-2'>
-              Manage your restaurant and business
+              Manage your restaurants and business
             </p>
           </div>
-          {restaurant ? (
-            <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-              <DialogTrigger asChild>
-                <Button variant='outline'>Edit Restaurant</Button>
-              </DialogTrigger>
-              <DialogContent className='max-w-4xl max-h-[90vh] overflow-y-auto'>
-                <DialogHeader>
-                  <DialogTitle>Edit Restaurant</DialogTitle>
-                </DialogHeader>
-                <div className='max-h-[70vh] overflow-y-auto pr-2'>
-                  <EnhancedRestaurantForm
-                    initialData={restaurant}
-                    onSuccess={handleRestaurantUpdated}
-                    onCancel={() => setIsEditDialogOpen(false)}
-                    isEdit={true}
-                  />
-                </div>
-              </DialogContent>
-            </Dialog>
-          ) : (
+          {restaurants.length === 0 && (
             <Dialog
               open={isCreateDialogOpen}
               onOpenChange={setIsCreateDialogOpen}
@@ -126,6 +187,7 @@ function OwnerDashboardContent() {
                   <EnhancedRestaurantForm
                     onSuccess={handleRestaurantCreated}
                     onCancel={() => setIsCreateDialogOpen(false)}
+                    isEdit={false}
                   />
                 </div>
               </DialogContent>
@@ -133,146 +195,202 @@ function OwnerDashboardContent() {
           )}
         </div>
 
-        {!restaurant ? (
+        {restaurants.length === 0 ? (
           <Card>
-            <CardHeader>
-              <CardTitle>No Restaurant Found</CardTitle>
-              <CardDescription>
-                You don't have a restaurant yet. Create one to get started.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <EnhancedRestaurantForm onSuccess={handleRestaurantCreated} />
+            <CardContent className='text-center py-12'>
+              <h3 className='text-lg font-semibold text-gray-900 mb-2'>
+                No Restaurants Found
+              </h3>
+              <p className='text-gray-600 mb-4'>
+                Get started by creating your first restaurant.
+              </p>
+              <Button onClick={() => setIsCreateDialogOpen(true)}>
+                Create Restaurant
+              </Button>
             </CardContent>
           </Card>
         ) : (
-          <div className='grid gap-6'>
-            <Card>
-              <CardHeader>
-                <CardTitle>Restaurant Details</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
-                  <div>
-                    <h3 className='font-semibold text-gray-900'>Name</h3>
-                    <p className='text-gray-600'>{restaurant.name}</p>
-                  </div>
-                  <div>
-                    <h3 className='font-semibold text-gray-900'>Location</h3>
-                    <p className='text-gray-600'>{restaurant.place}</p>
-                  </div>
-                  {restaurant.slogan && (
-                    <div>
-                      <h3 className='font-semibold text-gray-900'>Slogan</h3>
-                      <p className='text-gray-600 italic'>
-                        "{restaurant.slogan}"
-                      </p>
-                    </div>
-                  )}
-                  {restaurant.genre && (
-                    <div>
-                      <h3 className='font-semibold text-gray-900'>Cuisine</h3>
-                      <p className='text-gray-600'>{restaurant.genre}</p>
-                    </div>
-                  )}
-                  {restaurant.budget && (
-                    <div>
-                      <h3 className='font-semibold text-gray-900'>Budget</h3>
-                      <p className='text-gray-600'>{restaurant.budget}</p>
-                    </div>
-                  )}
-                  <div>
-                    <h3 className='font-semibold text-gray-900'>Status</h3>
-                    <p className='text-gray-600'>
-                      {restaurant.isOpen ? 'Open' : 'Closed'}
-                    </p>
-                  </div>
-                </div>
-                {restaurant.description && (
-                  <div className='mt-4'>
-                    <h3 className='font-semibold text-gray-900'>Description</h3>
-                    <div
-                      className='text-gray-600 prose prose-gray max-w-none'
-                      dangerouslySetInnerHTML={{
-                        __html: restaurant.description,
-                      }}
-                    />
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4'>
-              <Card>
-                <CardContent className='p-6 text-center'>
-                  <h3 className='font-semibold text-gray-900 mb-2'>
-                    Menu & Course Management
-                  </h3>
-                  <p className='text-gray-600 mb-4'>
-                    Manage your restaurant menus and courses separately
-                  </p>
-                  <Link href='/owner-dashboard/menus'>
-                    <Button variant='outline' size='sm' className='w-full'>
-                      Manage Menu & Courses
-                    </Button>
-                  </Link>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardContent className='p-6 text-center'>
-                  <h3 className='font-semibold text-gray-900 mb-2'>
-                    Restaurant Images
-                  </h3>
-                  <p className='text-gray-600 mb-4'>
-                    Upload and manage restaurant photos
-                  </p>
-                  <Link href='/owner-dashboard/restaurant-images'>
-                    <Button variant='outline' size='sm' className='w-full'>
-                      Manage Images
-                    </Button>
-                  </Link>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardContent className='p-6 text-center'>
-                  <h3 className='font-semibold text-gray-900 mb-2'>
-                    Reservations
-                  </h3>
-                  <p className='text-gray-600 mb-4'>
-                    View and manage reservations
-                  </p>
-                  <Link href='/owner-dashboard/reservations'>
-                    <Button variant='outline' size='sm' className='w-full'>
-                      View Reservations
-                    </Button>
-                  </Link>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardContent className='p-6 text-center'>
-                  <h3 className='font-semibold text-gray-900 mb-2'>Reviews</h3>
-                  <p className='text-gray-600 mb-4'>Manage customer reviews</p>
-                  <Link href='/owner-dashboard/reviews'>
-                    <Button variant='outline' size='sm' className='w-full'>
-                      Manage Reviews
-                    </Button>
-                  </Link>
-                </CardContent>
-              </Card>
-            </div>
+          <div className='grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6'>
+            {restaurants.map((restaurant) => (
+              <RestaurantCard
+                key={restaurant.id}
+                restaurant={restaurant}
+                onEdit={handleEditRestaurant}
+              />
+            ))}
           </div>
         )}
+
+        {/* Edit Restaurant Dialog */}
+        <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+          <DialogContent className='max-w-4xl max-h-[90vh] overflow-y-auto'>
+            <DialogHeader>
+              <DialogTitle>Edit Restaurant</DialogTitle>
+            </DialogHeader>
+            <div className='max-h-[70vh] overflow-y-auto pr-2'>
+              {editingRestaurant && (
+                <EnhancedRestaurantForm
+                  initialData={editingRestaurant}
+                  onSuccess={handleRestaurantUpdated}
+                  onCancel={() => {
+                    setIsEditDialogOpen(false);
+                    setEditingRestaurant(null);
+                  }}
+                  isEdit={true}
+                />
+              )}
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );
 }
 
+// Restaurant Card Component
+function RestaurantCard({
+  restaurant,
+  onEdit,
+}: {
+  restaurant: Restaurant;
+  onEdit: (restaurant: Restaurant) => void;
+}) {
+  const mainImage =
+    restaurant.images?.find((img) => img.isMain) || restaurant.images?.[0];
+  const menuCount =
+    (restaurant.menus?.length || 0) + (restaurant.courses?.length || 0);
+
+  return (
+    <Card className='overflow-hidden hover:shadow-lg transition-shadow'>
+      {/* Restaurant Image */}
+      {mainImage && (
+        <div className='aspect-video overflow-hidden'>
+          <img
+            src={mainImage.url}
+            alt={mainImage.alt || restaurant.name}
+            className='w-full h-full object-cover'
+          />
+        </div>
+      )}
+
+      <CardHeader>
+        <div className='flex justify-between items-start'>
+          <div className='flex-1'>
+            <CardTitle className='text-lg mb-2'>{restaurant.name}</CardTitle>
+            <div className='flex items-center gap-2 mb-2'>
+              <Badge variant={restaurant.isOpen ? 'default' : 'secondary'}>
+                {restaurant.isOpen ? 'Open' : 'Closed'}
+              </Badge>
+              {restaurant.genre && (
+                <Badge variant='outline'>{restaurant.genre}</Badge>
+              )}
+            </div>
+          </div>
+          <Button
+            variant='ghost'
+            size='sm'
+            onClick={() => onEdit(restaurant)}
+            className='ml-2'
+          >
+            <Edit className='w-4 h-4' />
+          </Button>
+        </div>
+
+        {restaurant.slogan && (
+          <p className='text-gray-600 italic text-sm'>"{restaurant.slogan}"</p>
+        )}
+      </CardHeader>
+
+      <CardContent className='space-y-4'>
+        {/* Basic Info */}
+        <div className='space-y-2'>
+          <div className='flex items-center gap-2 text-sm text-gray-600'>
+            <MapPin className='w-4 h-4' />
+            <span>{restaurant.place}</span>
+          </div>
+          {restaurant.budget && (
+            <div className='flex items-center gap-2 text-sm text-gray-600'>
+              <span className='font-medium'>Budget:</span>
+              <span>{restaurant.budget}</span>
+            </div>
+          )}
+          {restaurant.capacity && (
+            <div className='flex items-center gap-2 text-sm text-gray-600'>
+              <Users className='w-4 h-4' />
+              <span>Capacity: {restaurant.capacity} people</span>
+            </div>
+          )}
+        </div>
+
+        {/* Description */}
+        {restaurant.description && (
+          <p className='text-sm text-gray-600 line-clamp-2'>
+            {restaurant.description}
+          </p>
+        )}
+
+        {/* Quick Stats */}
+        <div className='grid grid-cols-2 gap-4 pt-2 border-t'>
+          <div className='text-center'>
+            <div className='text-lg font-semibold text-blue-600'>
+              {menuCount}
+            </div>
+            <div className='text-xs text-gray-600'>Menu Items</div>
+          </div>
+          <div className='text-center'>
+            <div className='text-lg font-semibold text-green-600'>0</div>
+            <div className='text-xs text-gray-600'>Reviews</div>
+          </div>
+        </div>
+
+        {/* Action Buttons */}
+        <div className='grid grid-cols-2 gap-2 pt-2'>
+          <Link
+            href={`/owner-dashboard/restaurant-images?restaurant=${restaurant.id}`}
+          >
+            <Button variant='outline' size='sm' className='w-full'>
+              <ImageIcon className='w-4 h-4 mr-1' />
+              Images
+            </Button>
+          </Link>
+          <Link href={`/owner-dashboard/menus?restaurant=${restaurant.id}`}>
+            <Button variant='outline' size='sm' className='w-full'>
+              <Utensils className='w-4 h-4 mr-1' />
+              Menus
+            </Button>
+          </Link>
+          <Link
+            href={`/owner-dashboard/reservations?restaurant=${restaurant.id}`}
+          >
+            <Button variant='outline' size='sm' className='w-full'>
+              <Calendar className='w-4 h-4 mr-1' />
+              Bookings
+            </Button>
+          </Link>
+          <Link href={`/owner-dashboard/reviews?restaurant=${restaurant.id}`}>
+            <Button variant='outline' size='sm' className='w-full'>
+              <MessageSquare className='w-4 h-4 mr-1' />
+              Reviews
+            </Button>
+          </Link>
+        </div>
+
+        {/* Public View Link */}
+        <div className='pt-2 border-t'>
+          <Link href={`/r/${restaurant.slug}`}>
+            <Button variant='ghost' size='sm' className='w-full'>
+              View Public Page
+            </Button>
+          </Link>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 export default function OwnerDashboard() {
   return (
-    <RoleGuard allowedRoles={['OWNER', 'SUPER_ADMIN']}>
+    <RoleGuard allowedRoles={['OWNER']}>
       <OwnerDashboardContent />
     </RoleGuard>
   );
