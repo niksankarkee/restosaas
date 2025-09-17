@@ -129,14 +129,6 @@ func Mount(r *gin.Engine, gdb *gorm.DB) {
 		superAdminOrgGroup.POST("/:id/restaurants", restaurant.CreateRestaurantForOrganization) // Create restaurant for organization
 	}
 
-	// Organization management routes (OWNER only)
-	organizationGroup := r.Group("/api/organizations")
-	organizationGroup.Use(auth.RequireAuth(string(db.RoleOwner), string(db.RoleSuper)), auth.AddTokenToResponse())
-	{
-		organizationGroup.GET("/me", organization.GetMyOrganization)    // Get my organization
-		organizationGroup.PUT("/me", organization.UpdateMyOrganization) // Update my organization
-	}
-
 	// Restaurant management routes (OWNER only)
 	restaurantGroup := r.Group("/api/owner/restaurants")
 	restaurantGroup.Use(auth.RequireAuth(string(db.RoleOwner), string(db.RoleSuper)), auth.AddTokenToResponse())

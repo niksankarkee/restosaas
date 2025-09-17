@@ -210,7 +210,7 @@ function OwnerDashboardContent() {
             </CardContent>
           </Card>
         ) : (
-          <div className='grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6'>
+          <div className='space-y-6'>
             {restaurants.map((restaurant) => (
               <RestaurantCard
                 key={restaurant.id}
@@ -262,21 +262,23 @@ function RestaurantCard({
 
   return (
     <Card className='overflow-hidden hover:shadow-lg transition-shadow'>
-      {/* Restaurant Image */}
-      {mainImage && (
-        <div className='aspect-video overflow-hidden'>
-          <img
-            src={mainImage.url}
-            alt={mainImage.alt || restaurant.name}
-            className='w-full h-full object-cover'
-          />
-        </div>
-      )}
-
-      <CardHeader>
-        <div className='flex justify-between items-start'>
+      <div className='flex flex-col md:flex-row'>
+        {/* Restaurant Image */}
+        {mainImage && (
+          <div className='w-full md:w-1/3 aspect-video md:aspect-square overflow-hidden'>
+            <img
+              src={mainImage.url}
+              alt={mainImage.alt || restaurant.name}
+              className='w-full h-full object-cover'
+            />
+          </div>
+        )}
+      </div>
+      {/* Restaurant Content */}
+      <div className='flex-1 p-6'>
+        <div className='flex justify-between items-start mb-4'>
           <div className='flex-1'>
-            <CardTitle className='text-lg mb-2'>{restaurant.name}</CardTitle>
+            <h3 className='text-xl font-semibold mb-2'>{restaurant.name}</h3>
             <div className='flex items-center gap-2 mb-2'>
               <Badge variant={restaurant.isOpen ? 'default' : 'secondary'}>
                 {restaurant.isOpen ? 'Open' : 'Closed'}
@@ -297,100 +299,102 @@ function RestaurantCard({
         </div>
 
         {restaurant.slogan && (
-          <p className='text-gray-600 italic text-sm'>"{restaurant.slogan}"</p>
-        )}
-      </CardHeader>
-
-      <CardContent className='space-y-4'>
-        {/* Basic Info */}
-        <div className='space-y-2'>
-          <div className='flex items-center gap-2 text-sm text-gray-600'>
-            <MapPin className='w-4 h-4' />
-            <span>{restaurant.place}</span>
-          </div>
-          {restaurant.budget && (
-            <div className='flex items-center gap-2 text-sm text-gray-600'>
-              <span className='font-medium'>Budget:</span>
-              <span>{restaurant.budget}</span>
-            </div>
-          )}
-          {restaurant.capacity && (
-            <div className='flex items-center gap-2 text-sm text-gray-600'>
-              <Users className='w-4 h-4' />
-              <span>Capacity: {restaurant.capacity} people</span>
-            </div>
-          )}
-        </div>
-
-        {/* Description */}
-        {restaurant.description && (
-          <p className='text-sm text-gray-600 line-clamp-2'>
-            {restaurant.description}
+          <p className='text-gray-600 italic text-sm mb-4'>
+            "{restaurant.slogan}"
           </p>
         )}
 
-        {/* Quick Stats */}
-        <div className='grid grid-cols-2 gap-4 pt-2 border-t'>
-          <div className='text-center'>
-            <div className='text-lg font-semibold text-blue-600'>
-              {menuCount}
+        <div className='space-y-4'>
+          {/* Basic Info */}
+          <div className='space-y-2'>
+            <div className='flex items-center gap-2 text-sm text-gray-600'>
+              <MapPin className='w-4 h-4' />
+              <span>{restaurant.place}</span>
             </div>
-            <div className='text-xs text-gray-600'>Menu Items</div>
+            {restaurant.budget && (
+              <div className='flex items-center gap-2 text-sm text-gray-600'>
+                <span className='font-medium'>Budget:</span>
+                <span>{restaurant.budget}</span>
+              </div>
+            )}
+            {restaurant.capacity && (
+              <div className='flex items-center gap-2 text-sm text-gray-600'>
+                <Users className='w-4 h-4' />
+                <span>Capacity: {restaurant.capacity} people</span>
+              </div>
+            )}
           </div>
-          <div className='text-center'>
-            <div className='text-lg font-semibold text-green-600'>0</div>
-            <div className='text-xs text-gray-600'>Reviews</div>
+
+          {/* Description */}
+          {restaurant.description && (
+            <p className='text-sm text-gray-600 line-clamp-2'>
+              {restaurant.description}
+            </p>
+          )}
+
+          {/* Quick Stats */}
+          <div className='grid grid-cols-2 gap-4 pt-2 border-t'>
+            <div className='text-center'>
+              <div className='text-lg font-semibold text-blue-600'>
+                {menuCount}
+              </div>
+              <div className='text-xs text-gray-600'>Menu Items</div>
+            </div>
+            <div className='text-center'>
+              <div className='text-lg font-semibold text-green-600'>0</div>
+              <div className='text-xs text-gray-600'>Reviews</div>
+            </div>
+          </div>
+
+          {/* Action Buttons */}
+          <div className='grid grid-cols-2 gap-2 pt-2'>
+            <Link
+              href={`/owner-dashboard/restaurant-images?restaurant=${restaurant.id}`}
+            >
+              <Button variant='outline' size='sm' className='w-full'>
+                <ImageIcon className='w-4 h-4 mr-1' />
+                Images
+              </Button>
+            </Link>
+            <Link href={`/owner-dashboard/menus?restaurant=${restaurant.id}`}>
+              <Button variant='outline' size='sm' className='w-full'>
+                <Utensils className='w-4 h-4 mr-1' />
+                Menus
+              </Button>
+            </Link>
+            <Link
+              href={`/owner-dashboard/reservations?restaurant=${restaurant.id}`}
+            >
+              <Button variant='outline' size='sm' className='w-full'>
+                <Calendar className='w-4 h-4 mr-1' />
+                Bookings
+              </Button>
+            </Link>
+            <Link href={`/owner-dashboard/reviews?restaurant=${restaurant.id}`}>
+              <Button variant='outline' size='sm' className='w-full'>
+                <MessageSquare className='w-4 h-4 mr-1' />
+                Reviews
+              </Button>
+            </Link>
+          </div>
+
+          {/* Public View Link */}
+          <div className='pt-2 border-t'>
+            <Link href={`/r/${restaurant.slug}`}>
+              <Button variant='ghost' size='sm' className='w-full'>
+                View Public Page
+              </Button>
+            </Link>
           </div>
         </div>
-
-        {/* Action Buttons */}
-        <div className='grid grid-cols-2 gap-2 pt-2'>
-          <Link
-            href={`/owner-dashboard/restaurant-images?restaurant=${restaurant.id}`}
-          >
-            <Button variant='outline' size='sm' className='w-full'>
-              <ImageIcon className='w-4 h-4 mr-1' />
-              Images
-            </Button>
-          </Link>
-          <Link href={`/owner-dashboard/menus?restaurant=${restaurant.id}`}>
-            <Button variant='outline' size='sm' className='w-full'>
-              <Utensils className='w-4 h-4 mr-1' />
-              Menus
-            </Button>
-          </Link>
-          <Link
-            href={`/owner-dashboard/reservations?restaurant=${restaurant.id}`}
-          >
-            <Button variant='outline' size='sm' className='w-full'>
-              <Calendar className='w-4 h-4 mr-1' />
-              Bookings
-            </Button>
-          </Link>
-          <Link href={`/owner-dashboard/reviews?restaurant=${restaurant.id}`}>
-            <Button variant='outline' size='sm' className='w-full'>
-              <MessageSquare className='w-4 h-4 mr-1' />
-              Reviews
-            </Button>
-          </Link>
-        </div>
-
-        {/* Public View Link */}
-        <div className='pt-2 border-t'>
-          <Link href={`/r/${restaurant.slug}`}>
-            <Button variant='ghost' size='sm' className='w-full'>
-              View Public Page
-            </Button>
-          </Link>
-        </div>
-      </CardContent>
+      </div>
     </Card>
   );
 }
 
 export default function OwnerDashboard() {
   return (
-    <RoleGuard allowedRoles={['OWNER']}>
+    <RoleGuard allowedRoles={['OWNER']} redirectTo='/'>
       <OwnerDashboardContent />
     </RoleGuard>
   );

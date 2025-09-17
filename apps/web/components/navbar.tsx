@@ -48,22 +48,13 @@ export function Navbar() {
               </Link>
               {user && (
                 <>
-                  {/* Only OWNER and SUPER_ADMIN can see Owner Dashboard */}
-                  {(user.role === 'OWNER' || user.role === 'SUPER_ADMIN') && (
+                  {/* Only OWNER can see Owner Dashboard */}
+                  {user.role === 'OWNER' && (
                     <Link
                       href='/owner-dashboard'
                       className='text-gray-600 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium'
                     >
                       Owner Dashboard
-                    </Link>
-                  )}
-                  {/* Only SUPER_ADMIN can see Organization Dashboard */}
-                  {user.role === 'SUPER_ADMIN' && (
-                    <Link
-                      href='/organization-dashboard'
-                      className='text-gray-600 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium'
-                    >
-                      Organization
                     </Link>
                   )}
                   {/* Only SUPER_ADMIN can see Super Admin */}
