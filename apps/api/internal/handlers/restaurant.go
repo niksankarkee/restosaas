@@ -672,3 +672,74 @@ func (h *RestaurantHandler) GetRestaurantReviews(c *gin.Context) {
 		"reviewCount": reviewCount,
 	})
 }
+
+// POST /api/owner/restaurants/:id/images/:imageId/set-main - Set main image
+func (h *RestaurantHandler) SetMainImage(c *gin.Context) {
+	restaurantID := c.Param("id")
+	imageID := c.Param("imageId")
+
+	// Parse UUIDs
+	restaurantUUID, err := uuid.Parse(restaurantID)
+	if err != nil {
+		c.JSON(400, gin.H{"error": "invalid restaurant ID"})
+		return
+	}
+
+	imageUUID, err := uuid.Parse(imageID)
+	if err != nil {
+		c.JSON(400, gin.H{"error": "invalid image ID"})
+		return
+	}
+
+	// Check if restaurant exists
+	var restaurant db.Restaurant
+	if err := h.DB.Where("id = ?", restaurantUUID).First(&restaurant).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			c.JSON(404, gin.H{"error": "restaurant not found"})
+			return
+		}
+		c.JSON(500, gin.H{"error": "failed to fetch restaurant"})
+		return
+	}
+
+	// Check if image exists and belongs to this restaurant
+	var image db.Image
+	if err := h.DB.Where("id = ? AND restaurant_id = ?", imageUUID, restaurantUUID).First(&image).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			c.JSON(404, gin.H{"error": "image not found or doesn't belong to this restaurant"})
+			return
+		}
+		c.JSON(500, gin.H{"error": "failed to fetch image"})
+		return
+	}
+
+	// Start transaction to ensure only one main image
+	err = h.DB.Transaction(func(tx *gorm.DB) error {
+		// Set all images for this restaurant to not main
+		if err := tx.Model(&db.Image{}).Where("restaurant_id = ?", restaurantUUID).Update("is_main", false).Error; err != nil {
+			return err
+		}
+
+		// Set the selected image as main
+		if err := tx.Model(&image).Update("is_main", true).Error; err != nil {
+			return err
+		}
+
+		// Update restaurant's main_image_id
+		if err := tx.Model(&restaurant).Update("main_image_id", imageUUID).Error; err != nil {
+			return err
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		c.JSON(500, gin.H{"error": "failed to set main image"})
+		return
+	}
+
+	c.JSON(200, gin.H{
+		"message": "main image set successfully",
+		"imageId": imageID,
+	})
+}

@@ -113,6 +113,11 @@ reset-db:
 	sleep 10
 	@echo "Database reset complete!"
 
+reset-db-schema:
+	@echo "Resetting database schema (keeping data)..."
+	docker exec restosaas_db psql -U postgres -d restosaas -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;"
+	@echo "Schema reset complete! Run 'make api' to recreate tables."
+
 seed-db:
 	@echo "Seeding database with sample data..."
 	cd scripts && chmod +x simple-seed.sh && ./simple-seed.sh

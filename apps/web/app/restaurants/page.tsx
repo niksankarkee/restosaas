@@ -31,7 +31,7 @@ interface Restaurant {
   genre: string;
   budget: string;
   description?: string;
-  is_open: boolean;
+  isOpen: boolean;
   capacity: number;
   main_image_id?: string;
   images?: Array<{
@@ -247,12 +247,12 @@ export default function Restaurants() {
                   {/* Status Badges */}
                   <div className='absolute top-3 left-3 flex flex-wrap gap-2'>
                     <Badge
-                      variant={restaurant.is_open ? 'default' : 'destructive'}
+                      variant={restaurant.isOpen ? 'default' : 'destructive'}
                       className='shadow-md'
                     >
                       {isOpenNow
                         ? APP_TEXT.RESTAURANTS.OPEN_NOW
-                        : restaurant.is_open
+                        : restaurant.isOpen
                         ? APP_TEXT.COMMON.OPEN
                         : APP_TEXT.RESTAURANTS.CLOSED_NOW}
                     </Badge>

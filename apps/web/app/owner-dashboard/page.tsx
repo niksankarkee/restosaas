@@ -202,7 +202,7 @@ function OwnerDashboardContent() {
               </CardContent>
             </Card>
 
-            <div className='grid grid-cols-1 md:grid-cols-3 gap-4'>
+            <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4'>
               <Card>
                 <CardContent className='p-6 text-center'>
                   <h3 className='font-semibold text-gray-900 mb-2'>
@@ -214,6 +214,22 @@ function OwnerDashboardContent() {
                   <Link href='/owner-dashboard/menus'>
                     <Button variant='outline' size='sm' className='w-full'>
                       Manage Menu & Courses
+                    </Button>
+                  </Link>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardContent className='p-6 text-center'>
+                  <h3 className='font-semibold text-gray-900 mb-2'>
+                    Restaurant Images
+                  </h3>
+                  <p className='text-gray-600 mb-4'>
+                    Upload and manage restaurant photos
+                  </p>
+                  <Link href='/owner-dashboard/restaurant-images'>
+                    <Button variant='outline' size='sm' className='w-full'>
+                      Manage Images
                     </Button>
                   </Link>
                 </CardContent>

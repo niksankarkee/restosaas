@@ -97,9 +97,9 @@ func (h *PublicHandler) ListRestaurants(c *gin.Context) {
 		return
 	}
 
-	// Get restaurants with pagination
+	// Get restaurants with pagination and preload images
 	offset := (filters.Page - 1) * filters.Limit
-	if err := h.DB.Where("is_open = ?", true).Offset(offset).Limit(filters.Limit).Find(&restaurants).Error; err != nil {
+	if err := h.DB.Preload("Images").Where("is_open = ?", true).Offset(offset).Limit(filters.Limit).Find(&restaurants).Error; err != nil {
 		c.JSON(500, gin.H{"error": "failed to fetch restaurants: " + err.Error()})
 		return
 	}
@@ -107,23 +107,43 @@ func (h *PublicHandler) ListRestaurants(c *gin.Context) {
 	// Convert to response format
 	var response []gin.H
 	for _, restaurant := range restaurants {
+		// Get approved reviews for average rating
+		var reviews []db.Review
+		h.DB.Where("restaurant_id = ? AND is_approved = ?", restaurant.ID, true).Find(&reviews)
+
+		// Calculate average rating
+		var totalRating int
+		var reviewCount int
+		for _, review := range reviews {
+			totalRating += review.Rating
+			reviewCount++
+		}
+
+		avgRating := 0.0
+		if reviewCount > 0 {
+			avgRating = float64(totalRating) / float64(reviewCount)
+		}
+
 		response = append(response, gin.H{
-			"id":          restaurant.ID.String(),
-			"slug":        restaurant.Slug,
-			"name":        restaurant.Name,
-			"slogan":      restaurant.Slogan,
-			"place":       restaurant.Place,
-			"genre":       restaurant.Genre,
-			"budget":      restaurant.Budget,
-			"title":       restaurant.Title,
-			"description": restaurant.Description,
-			"area":        restaurant.Area,
-			"address":     restaurant.Address,
-			"phone":       restaurant.Phone,
-			"capacity":    restaurant.Capacity,
-			"isOpen":      restaurant.IsOpen,
-			"createdAt":   restaurant.CreatedAt,
-			"updatedAt":   restaurant.UpdatedAt,
+			"id":            restaurant.ID.String(),
+			"slug":          restaurant.Slug,
+			"name":          restaurant.Name,
+			"slogan":        restaurant.Slogan,
+			"place":         restaurant.Place,
+			"genre":         restaurant.Genre,
+			"budget":        restaurant.Budget,
+			"title":         restaurant.Title,
+			"description":   restaurant.Description,
+			"address":       restaurant.Address,
+			"phone":         restaurant.Phone,
+			"capacity":      restaurant.Capacity,
+			"isOpen":        restaurant.IsOpen,
+			"main_image_id": restaurant.MainImageID,
+			"images":        restaurant.Images,
+			"avg_rating":    avgRating,
+			"review_count":  reviewCount,
+			"createdAt":     restaurant.CreatedAt,
+			"updatedAt":     restaurant.UpdatedAt,
 		})
 	}
 
@@ -241,7 +261,7 @@ func (h *PublicHandler) GetRestaurant(c *gin.Context) {
 		return
 	}
 	var r db.Restaurant
-	if err := h.DB.Where("slug = ?", slug).First(&r).Error; err != nil {
+	if err := h.DB.Preload("Images").Where("slug = ?", slug).First(&r).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
 			c.JSON(404, gin.H{"error": "restaurant not found"})
 			return
@@ -283,15 +303,14 @@ func (h *PublicHandler) GetRestaurant(c *gin.Context) {
 		"Budget":      r.Budget,
 		"Title":       r.Title,
 		"Description": r.Description,
-		"Area":        r.Area,
 		"Address":     r.Address,
 		"Phone":       r.Phone,
 		"Timezone":    r.Timezone,
 		"Capacity":    r.Capacity,
 		"IsOpen":      r.IsOpen,
 		"OpenHours":   openHours,
-		"Menus":       []db.Menu{},  // Will be populated separately if needed
-		"Images":      []db.Image{}, // Will be populated separately if needed
+		"Menus":       []db.Menu{}, // Will be populated separately if needed
+		"Images":      r.Images,    // Now populated with actual images
 		"MainImageID": r.MainImageID,
 		"AvgRating":   avgRating,
 		"ReviewCount": reviewCount,

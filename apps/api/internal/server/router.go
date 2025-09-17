@@ -133,12 +133,13 @@ func Mount(r *gin.Engine, gdb *gorm.DB) {
 	restaurantGroup := r.Group("/api/owner/restaurants")
 	restaurantGroup.Use(auth.RequireAuth(string(db.RoleOwner), string(db.RoleSuper)), auth.AddTokenToResponse())
 	{
-		restaurantGroup.POST("", restaurant.CreateRestaurant)          // Create restaurant
-		restaurantGroup.GET("/me", restaurant.GetMyRestaurant)         // Get my restaurant
-		restaurantGroup.PUT("/:id", restaurant.UpdateRestaurant)       // Update restaurant
-		restaurantGroup.DELETE("/:id", restaurant.DeleteRestaurant)    // Delete restaurant
-		restaurantGroup.POST("/:id/hours", restaurant.SetOpeningHours) // Set opening hours
-		restaurantGroup.POST("/:id/images", restaurant.UploadImages)   // Upload images
+		restaurantGroup.POST("", restaurant.CreateRestaurant)                          // Create restaurant
+		restaurantGroup.GET("/me", restaurant.GetMyRestaurant)                         // Get my restaurant
+		restaurantGroup.PUT("/:id", restaurant.UpdateRestaurant)                       // Update restaurant
+		restaurantGroup.DELETE("/:id", restaurant.DeleteRestaurant)                    // Delete restaurant
+		restaurantGroup.POST("/:id/hours", restaurant.SetOpeningHours)                 // Set opening hours
+		restaurantGroup.POST("/:id/images", restaurant.UploadImages)                   // Upload images
+		restaurantGroup.POST("/:id/images/:imageId/set-main", restaurant.SetMainImage) // Set main image
 	}
 
 	// Menu management routes (OWNER only)

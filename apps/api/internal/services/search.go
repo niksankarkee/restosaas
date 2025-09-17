@@ -248,7 +248,6 @@ func (s *SearchService) addRatingsToRestaurants(restaurants []db.Restaurant) ([]
 			Budget:      restaurant.Budget,
 			Title:       restaurant.Title,
 			Description: restaurant.Description,
-			Area:        restaurant.Area,
 			Address:     restaurant.Address,
 			Phone:       restaurant.Phone,
 			Timezone:    restaurant.Timezone,
