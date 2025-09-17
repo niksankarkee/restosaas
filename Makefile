@@ -106,12 +106,8 @@ install:
 
 # Database reset and seeding
 reset-db:
-	@echo "Resetting Docker database..."
-	docker compose -f infra/docker-compose.yml down -v
-	docker compose -f infra/docker-compose.yml up -d db
-	@echo "Waiting for database to be ready..."
-	sleep 10
-	@echo "Database reset complete!"
+	@echo "Resetting Docker database with proper schema..."
+	./scripts/reset-database.sh
 
 reset-db-schema:
 	@echo "Resetting database schema (keeping data)..."

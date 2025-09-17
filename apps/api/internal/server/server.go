@@ -31,7 +31,7 @@ func New() *App {
 	if err != nil {
 		log.Fatalf("db connect: %v", err)
 	}
-	if err := db.AutoMigrate(gdb); err != nil {
+	if err := db.RunMigrations(gdb); err != nil {
 		log.Fatalf("migrate: %v", err)
 	}
 	r := gin.Default()

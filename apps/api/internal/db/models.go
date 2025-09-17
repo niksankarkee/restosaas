@@ -86,10 +86,11 @@ type Restaurant struct {
 	Budget      string    `gorm:"not null"`       // Budget range (e.g., "500-1500")
 	Title       string    `gorm:"not null"`       // Restaurant title
 	Description string    `gorm:"type:text"`
+	Area        string    `gorm:"index"` // Area within the place
 	Address     string
 	Phone       string
 	Timezone    string     `gorm:"not null;default:Asia/Kathmandu"`
-	Capacity    int        `gorm:"not null;default:30"`
+	Capacity    int64      `gorm:"not null;default:30"`                  // Changed to int64 to match database
 	IsOpen      bool       `gorm:"column:is_open;not null;default:true"` // Optional if restaurant is closed
 	MainImageID *uuid.UUID `gorm:"type:uuid"`                            // Reference to main image
 	// Relationships
@@ -164,8 +165,8 @@ type Image struct {
 	RestaurantID uuid.UUID `gorm:"type:uuid;index;not null"`
 	URL          string    `gorm:"not null"`
 	Alt          string
-	IsMain       bool `gorm:"not null;default:false"` // Main image for restaurant list
-	DisplayOrder int  `gorm:"not null;default:0"`     // Order for gallery display
+	IsMain       bool  `gorm:"not null;default:false"` // Main image for restaurant list
+	DisplayOrder int64 `gorm:"not null;default:0"`     // Order for gallery display (changed to int64)
 }
 
 type Customer struct {
