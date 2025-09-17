@@ -5,7 +5,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/example/restosaas/apps/api/internal/constants"
 	"github.com/example/restosaas/apps/api/internal/db"
+	"github.com/example/restosaas/apps/api/internal/logger"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
@@ -105,23 +107,30 @@ type ImageResponse struct {
 
 // POST /api/owner/restaurants - Create restaurant (OWNER only)
 func (h *RestaurantHandler) CreateRestaurant(c *gin.Context) {
+	logger.Debug("CreateRestaurant: Starting restaurant creation process")
+
 	// Get user ID from context (set by auth middleware)
 	userID, exists := c.Get("uid")
 	if !exists {
-		c.JSON(401, gin.H{"error": "unauthorized"})
+		logger.Warn("CreateRestaurant: User ID not found in context")
+		c.JSON(http.StatusUnauthorized, gin.H{"error": constants.ErrUnauthorized})
 		return
 	}
 
 	var req CreateRestaurantRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(400, gin.H{"error": err.Error()})
+		logger.Warnf("CreateRestaurant: Invalid request body - %v", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
+
+	logger.Debugf("CreateRestaurant: Processing request for restaurant %s", req.Name)
 
 	// Get user's organization
 	var orgMember db.OrgMember
 	if err := h.DB.Where("user_id = ?", userID).First(&orgMember).Error; err != nil {
-		c.JSON(404, gin.H{"error": "organization not found"})
+		logger.Warnf("CreateRestaurant: Organization not found for user %s", userID)
+		c.JSON(http.StatusNotFound, gin.H{"error": constants.ErrOrganizationNotFound})
 		return
 	}
 
@@ -131,7 +140,8 @@ func (h *RestaurantHandler) CreateRestaurant(c *gin.Context) {
 	// Check if restaurant with same slug already exists
 	var existingRestaurant db.Restaurant
 	if err := h.DB.Where("slug = ?", slug).First(&existingRestaurant).Error; err == nil {
-		c.JSON(409, gin.H{"error": "restaurant with this name already exists"})
+		logger.Warnf("CreateRestaurant: Restaurant with slug %s already exists", slug)
+		c.JSON(http.StatusConflict, gin.H{"error": "restaurant with this name already exists"})
 		return
 	}
 
@@ -156,9 +166,12 @@ func (h *RestaurantHandler) CreateRestaurant(c *gin.Context) {
 	}
 
 	if err := h.DB.Create(&restaurant).Error; err != nil {
-		c.JSON(500, gin.H{"error": "failed to create restaurant"})
+		logger.Errorf("CreateRestaurant: Failed to create restaurant in database - %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": constants.ErrFailedToCreateRestaurant})
 		return
 	}
+
+	logger.Infof("CreateRestaurant: Restaurant created successfully with ID %s", restaurant.ID.String())
 
 	response := RestaurantResponse{
 		ID:          restaurant.ID.String(),
@@ -178,7 +191,8 @@ func (h *RestaurantHandler) CreateRestaurant(c *gin.Context) {
 		UpdatedAt:   restaurant.UpdatedAt,
 	}
 
-	c.JSON(201, response)
+	logger.Infof("CreateRestaurant: Restaurant creation completed successfully for %s", restaurant.Name)
+	c.JSON(http.StatusCreated, response)
 }
 
 // GET /api/owner/restaurants/me - Get owner's restaurant (OWNER only)
