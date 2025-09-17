@@ -22,8 +22,16 @@ api.interceptors.response.use(
   (error) => {
     // Only handle client-side errors
     if (typeof window !== 'undefined' && error.response?.status === 401) {
-      localStorage.removeItem('authToken');
-      window.location.href = '/';
+      // Don't redirect on login/register endpoints - let the component handle the error
+      const isAuthEndpoint =
+        error.config?.url?.includes('/auth/login') ||
+        error.config?.url?.includes('/auth/register') ||
+        error.config?.url?.includes('/auth/oauth/');
+
+      if (!isAuthEndpoint) {
+        localStorage.removeItem('authToken');
+        window.location.href = '/';
+      }
     }
     return Promise.reject(error);
   }

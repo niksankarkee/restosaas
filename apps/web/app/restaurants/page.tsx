@@ -50,6 +50,23 @@ interface Restaurant {
   }>;
 }
 
+// Helper function to format price range
+const formatPriceRange = (restaurant: Restaurant): string => {
+  // If budget contains a range format like "500-1500" or "500 ~ 1500"
+  if (
+    restaurant.budget &&
+    (restaurant.budget.includes('-') || restaurant.budget.includes('~'))
+  ) {
+    return `Rs (${restaurant.budget})`;
+  }
+  // If budget is a single value
+  if (restaurant.budget && !restaurant.budget.includes('$')) {
+    return `Rs (${restaurant.budget})`;
+  }
+  // Fallback to old budget format if price range not available
+  return restaurant.budget.replace(/\$/g, 'Rs ');
+};
+
 export default function Restaurants() {
   const searchParams = useSearchParams();
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
@@ -294,10 +311,10 @@ export default function Restaurants() {
                       <div className='flex items-center space-x-2 text-neutral-600'>
                         <DollarSign className='h-5 w-5 text-secondary' />
                         <span className='font-medium text-neutral-700'>
-                          Budget:
+                          Price:
                         </span>
                         <span className='text-neutral-600'>
-                          {restaurant.budget}
+                          {formatPriceRange(restaurant)}
                         </span>
                       </div>
                       <div className='flex items-center space-x-2 text-neutral-600'>

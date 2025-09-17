@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"fmt"
 	"strconv"
 	"time"
 
@@ -266,6 +267,11 @@ func (h *PublicHandler) GetRestaurant(c *gin.Context) {
 		avgRating = float64(totalRating) / float64(reviewCount)
 	}
 
+	// Get opening hours
+	var openHours []db.OpeningHour
+	result := h.DB.Where("restaurant_id = ?", r.ID).Find(&openHours)
+	fmt.Printf("Query result: %v, Error: %v, Count: %d\n", result.RowsAffected, result.Error, len(openHours))
+
 	// Create response with additional fields
 	response := gin.H{
 		"ID":          r.ID,
@@ -283,9 +289,9 @@ func (h *PublicHandler) GetRestaurant(c *gin.Context) {
 		"Timezone":    r.Timezone,
 		"Capacity":    r.Capacity,
 		"IsOpen":      r.IsOpen,
-		"OpenHours":   []db.OpeningHour{}, // Will be populated separately if needed
-		"Menus":       []db.Menu{},        // Will be populated separately if needed
-		"Images":      []db.Image{},       // Will be populated separately if needed
+		"OpenHours":   openHours,
+		"Menus":       []db.Menu{},  // Will be populated separately if needed
+		"Images":      []db.Image{}, // Will be populated separately if needed
 		"MainImageID": r.MainImageID,
 		"AvgRating":   avgRating,
 		"ReviewCount": reviewCount,

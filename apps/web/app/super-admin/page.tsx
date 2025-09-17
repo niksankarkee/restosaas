@@ -989,13 +989,6 @@ function EditRestaurantForm({
   const [description, setDescription] = useState(restaurant.description || '');
   const [isLoading, setIsLoading] = useState(false);
 
-  const BUDGET_OPTIONS = [
-    { value: '$', label: '$ - Budget Friendly' },
-    { value: '$$', label: '$$ - Moderate' },
-    { value: '$$$', label: '$$$ - Expensive' },
-    { value: '$$$$', label: '$$$$ - Very Expensive' },
-  ];
-
   const GENRE_OPTIONS = [
     'Italian',
     'Chinese',
@@ -1097,23 +1090,21 @@ function EditRestaurantForm({
             </div>
 
             <div>
-              <Label htmlFor='restaurant-budget'>Budget Range *</Label>
-              <select
+              <Label htmlFor='restaurant-budget'>Price Range (Rs) *</Label>
+              <Input
                 id='restaurant-budget'
-                className='flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50'
+                type='text'
                 value={formData.budget}
                 onChange={(e) =>
                   setFormData((prev) => ({ ...prev, budget: e.target.value }))
                 }
                 required
-              >
-                <option value=''>Select budget range</option>
-                {BUDGET_OPTIONS.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
+                placeholder='e.g., 500-1500 or 500 ~ 1500'
+              />
+              <p className='text-sm text-gray-500 mt-1'>
+                Enter price range in format: min-max (e.g., 500-1500) or min ~
+                max (e.g., 500 ~ 1500)
+              </p>
             </div>
 
             <div>
