@@ -48,7 +48,18 @@ type LoginRequest struct {
 	Password string `json:"password" binding:"required"`
 }
 
-// POST /api/users - Create user
+// CreateUser godoc
+// @Summary Create a new user
+// @Description Create a new user account with the provided information
+// @Tags users
+// @Accept json
+// @Produce json
+// @Param user body CreateUserRequest true "User information"
+// @Success 201 {object} UserWithTokenResponse
+// @Failure 400 {object} map[string]string
+// @Failure 409 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /users [post]
 func (h *UserHandler) CreateUser(c *gin.Context) {
 	var req CreateUserRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -139,7 +150,18 @@ func (h *UserHandler) CreateUser(c *gin.Context) {
 	c.JSON(201, response)
 }
 
-// GET /api/users - List users (with pagination)
+// ListUsers godoc
+// @Summary List all users
+// @Description Get a paginated list of all users with optional filtering
+// @Tags users
+// @Accept json
+// @Produce json
+// @Param page query int false "Page number" default(1)
+// @Param limit query int false "Items per page" default(10)
+// @Param role query string false "Filter by role"
+// @Success 200 {object} map[string]interface{}
+// @Failure 500 {object} map[string]string
+// @Router /users [get]
 func (h *UserHandler) ListUsers(c *gin.Context) {
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "10"))
@@ -315,7 +337,18 @@ func (h *UserHandler) DeleteUser(c *gin.Context) {
 	c.Status(http.StatusNoContent)
 }
 
-// POST /api/auth/login - Login user
+// Login godoc
+// @Summary User login
+// @Description Authenticate user and return JWT token
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Param credentials body LoginRequest true "Login credentials"
+// @Success 200 {object} UserWithTokenResponse
+// @Failure 400 {object} map[string]string
+// @Failure 401 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /auth/login [post]
 func (h *UserHandler) Login(c *gin.Context) {
 	var req LoginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {

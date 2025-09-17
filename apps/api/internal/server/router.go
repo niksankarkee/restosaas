@@ -5,6 +5,8 @@ import (
 	"github.com/example/restosaas/apps/api/internal/db"
 	"github.com/example/restosaas/apps/api/internal/handlers"
 	"github.com/gin-gonic/gin"
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
 	"gorm.io/gorm"
 )
 
@@ -25,6 +27,9 @@ func Mount(r *gin.Engine, gdb *gorm.DB) {
 			"service": "restosaas-api",
 		})
 	})
+
+	// Swagger documentation
+	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
 	api := r.Group("/api")
 	api.Use(auth.OptionalAuth(), auth.AddTokenToResponse())

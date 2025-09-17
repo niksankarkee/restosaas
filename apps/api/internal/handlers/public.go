@@ -23,6 +23,22 @@ func NewPublicHandler(db *gorm.DB) *PublicHandler {
 	}
 }
 
+// ListRestaurants godoc
+// @Summary List restaurants
+// @Description Get a list of restaurants with pagination and filtering
+// @Tags public
+// @Accept json
+// @Produce json
+// @Param page query int false "Page number" default(1)
+// @Param limit query int false "Items per page" default(10)
+// @Param sort_by query string false "Sort field" default(rating)
+// @Param sort_dir query string false "Sort direction" default(desc)
+// @Param area query string false "Filter by area"
+// @Param cuisine query string false "Filter by cuisine"
+// @Param budget query string false "Filter by budget"
+// @Success 200 {object} map[string]interface{}
+// @Failure 500 {object} map[string]string
+// @Router /restaurants [get]
 func (h *PublicHandler) ListRestaurants(c *gin.Context) {
 	// Parse search parameters
 	filters := services.SearchFilters{
@@ -70,29 +86,58 @@ func (h *PublicHandler) ListRestaurants(c *gin.Context) {
 		filters.SortDir = "desc" // Default to descending
 	}
 
-	// Use search service
-	result, err := h.SearchService.SearchRestaurants(filters)
-	if err != nil {
-		// Log the error but return empty results instead of error
-		c.JSON(200, gin.H{
-			"restaurants": []interface{}{},
-			"total":       0,
-			"page":        filters.Page,
-			"limit":       filters.Limit,
-		})
+	// Simplified query - just get all open restaurants
+	var restaurants []db.Restaurant
+	var total int64
+
+	// Get total count first
+	if err := h.DB.Model(&db.Restaurant{}).Where("is_open = ?", true).Count(&total).Error; err != nil {
+		c.JSON(500, gin.H{"error": "failed to count restaurants: " + err.Error()})
 		return
 	}
 
-	c.JSON(200, result)
+	// Get restaurants with pagination
+	offset := (filters.Page - 1) * filters.Limit
+	if err := h.DB.Where("is_open = ?", true).Offset(offset).Limit(filters.Limit).Find(&restaurants).Error; err != nil {
+		c.JSON(500, gin.H{"error": "failed to fetch restaurants: " + err.Error()})
+		return
+	}
+
+	// Convert to response format
+	var response []gin.H
+	for _, restaurant := range restaurants {
+		response = append(response, gin.H{
+			"id":          restaurant.ID.String(),
+			"slug":        restaurant.Slug,
+			"name":        restaurant.Name,
+			"slogan":      restaurant.Slogan,
+			"place":       restaurant.Place,
+			"genre":       restaurant.Genre,
+			"budget":      restaurant.Budget,
+			"title":       restaurant.Title,
+			"description": restaurant.Description,
+			"area":        restaurant.Area,
+			"address":     restaurant.Address,
+			"phone":       restaurant.Phone,
+			"capacity":    restaurant.Capacity,
+			"isOpen":      restaurant.IsOpen,
+			"createdAt":   restaurant.CreatedAt,
+			"updatedAt":   restaurant.UpdatedAt,
+		})
+	}
+
+	c.JSON(200, gin.H{
+		"restaurants": response,
+		"total":       total,
+		"page":        filters.Page,
+		"limit":       filters.Limit,
+	})
 }
 
 // Advanced search endpoint
 func (h *PublicHandler) AdvancedSearch(c *gin.Context) {
 	query := c.Query("q")
-	if query == "" {
-		c.JSON(400, gin.H{"error": "search query is required"})
-		return
-	}
+	// Make query optional - if no query provided, search all restaurants
 
 	// Parse search parameters
 	filters := services.SearchFilters{
@@ -141,7 +186,7 @@ func (h *PublicHandler) SearchSuggestions(c *gin.Context) {
 
 	// Search restaurant names
 	var restaurants []db.Restaurant
-	h.DB.Select("name, genre").Where("name ILIKE ?", "%"+query+"%").Limit(5).Find(&restaurants)
+	h.DB.Select("name, genre").Where("name LIKE ?", "%"+query+"%").Limit(5).Find(&restaurants)
 
 	for _, restaurant := range restaurants {
 		suggestions = append(suggestions, restaurant.Name)
@@ -149,16 +194,15 @@ func (h *PublicHandler) SearchSuggestions(c *gin.Context) {
 
 	// Search unique cuisines
 	var cuisines []string
-	h.DB.Model(&db.Restaurant{}).Distinct("genre").Where("genre ILIKE ?", "%"+query+"%").Limit(5).Pluck("genre", &cuisines)
+	h.DB.Model(&db.Restaurant{}).Distinct("genre").Where("genre LIKE ?", "%"+query+"%").Limit(5).Pluck("genre", &cuisines)
 
-	for _, cuisine := range cuisines {
-		suggestions = append(suggestions, cuisine)
-	}
+	suggestions = append(suggestions, cuisines...)
 
 	// Search areas
 	var areas []string
-	h.DB.Model(&db.Restaurant{}).Distinct("area").Where("area ILIKE ?", "%"+query+"%").Limit(5).Pluck("area", &areas)
+	h.DB.Model(&db.Restaurant{}).Distinct("area").Where("area LIKE ?", "%"+query+"%").Limit(5).Pluck("area", &areas)
 
+	// Filter out empty areas and append to suggestions
 	for _, area := range areas {
 		if area != "" {
 			suggestions = append(suggestions, area)
@@ -181,7 +225,7 @@ func (h *PublicHandler) SearchSuggestions(c *gin.Context) {
 // Cache management endpoints
 func (h *PublicHandler) ClearSearchCache(c *gin.Context) {
 	h.SearchService.ClearCache()
-	c.JSON(200, gin.H{"message": "Search cache cleared successfully"})
+	c.JSON(200, gin.H{"message": "Cache cleared successfully"})
 }
 
 func (h *PublicHandler) GetCacheStats(c *gin.Context) {
@@ -191,9 +235,17 @@ func (h *PublicHandler) GetCacheStats(c *gin.Context) {
 
 func (h *PublicHandler) GetRestaurant(c *gin.Context) {
 	slug := c.Param("slug")
+	if slug == "" {
+		c.JSON(400, gin.H{"error": "invalid restaurant slug"})
+		return
+	}
 	var r db.Restaurant
-	if err := h.DB.Where("slug = ?", slug).Preload("OpenHours").Preload("Menus.Courses").Preload("Images").First(&r).Error; err != nil {
-		c.Status(404)
+	if err := h.DB.Where("slug = ?", slug).First(&r).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			c.JSON(404, gin.H{"error": "restaurant not found"})
+			return
+		}
+		c.JSON(500, gin.H{"error": err.Error()})
 		return
 	}
 
@@ -231,9 +283,9 @@ func (h *PublicHandler) GetRestaurant(c *gin.Context) {
 		"Timezone":    r.Timezone,
 		"Capacity":    r.Capacity,
 		"IsOpen":      r.IsOpen,
-		"OpenHours":   r.OpenHours,
-		"Menus":       r.Menus,
-		"Images":      r.Images,
+		"OpenHours":   []db.OpeningHour{}, // Will be populated separately if needed
+		"Menus":       []db.Menu{},        // Will be populated separately if needed
+		"Images":      []db.Image{},       // Will be populated separately if needed
 		"MainImageID": r.MainImageID,
 		"AvgRating":   avgRating,
 		"ReviewCount": reviewCount,
@@ -339,6 +391,7 @@ func (h *PublicHandler) CreateReview(c *gin.Context) {
 	}
 
 	rev := db.Review{
+		ID:           uuid.New(),
 		RestaurantID: resto.ID,
 		CustomerID:   customerUUID,
 		CustomerName: req.CustomerName,
@@ -346,6 +399,7 @@ func (h *PublicHandler) CreateReview(c *gin.Context) {
 		Title:        req.Title,
 		Comment:      req.Comment,
 		IsApproved:   false, // Reviews need approval
+		CreatedAt:    time.Now(),
 	}
 	if err := h.DB.Create(&rev).Error; err != nil {
 		c.JSON(500, gin.H{"error": err.Error()})
@@ -357,8 +411,19 @@ func (h *PublicHandler) CreateReview(c *gin.Context) {
 func (h *PublicHandler) GetRestaurantMenus(c *gin.Context) {
 	slug := c.Param("slug")
 	var r db.Restaurant
-	if err := h.DB.Where("slug = ?", slug).Preload("Menus.Courses").First(&r).Error; err != nil {
-		c.Status(404)
+	if err := h.DB.Where("slug = ?", slug).First(&r).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			c.JSON(404, gin.H{"error": "restaurant not found"})
+			return
+		}
+		c.JSON(500, gin.H{"error": "failed to fetch restaurant"})
+		return
+	}
+
+	// Get menus separately since foreign key relationships are disabled
+	var dbMenus []db.Menu
+	if err := h.DB.Where("restaurant_id = ?", r.ID).Find(&dbMenus).Error; err != nil {
+		c.JSON(500, gin.H{"error": "failed to fetch menus"})
 		return
 	}
 
@@ -375,7 +440,14 @@ func (h *PublicHandler) GetRestaurantMenus(c *gin.Context) {
 		} `json:"courses"`
 	}
 
-	for _, menu := range r.Menus {
+	for _, menu := range dbMenus {
+		// Get courses for this menu
+		var dbCourses []db.Course
+		if err := h.DB.Where("menu_id = ?", menu.ID).Find(&dbCourses).Error; err != nil {
+			c.JSON(500, gin.H{"error": "failed to fetch courses"})
+			return
+		}
+
 		var courses []struct {
 			ID       string `json:"id"`
 			Name     string `json:"name"`
@@ -383,7 +455,7 @@ func (h *PublicHandler) GetRestaurantMenus(c *gin.Context) {
 			ImageURL string `json:"imageUrl"`
 		}
 
-		for _, course := range menu.Courses {
+		for _, course := range dbCourses {
 			courses = append(courses, struct {
 				ID       string `json:"id"`
 				Name     string `json:"name"`

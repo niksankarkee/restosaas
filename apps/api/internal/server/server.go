@@ -20,7 +20,9 @@ type App struct {
 func New() *App {
 	_ = godotenv.Load()
 	dsn := os.Getenv("DB_DSN")
-	gdb, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
+	gdb, err := gorm.Open(postgres.Open(dsn), &gorm.Config{
+		DisableForeignKeyConstraintWhenMigrating: true,
+	})
 	if err != nil {
 		log.Fatalf("db connect: %v", err)
 	}

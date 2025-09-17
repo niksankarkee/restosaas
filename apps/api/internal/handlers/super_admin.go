@@ -204,7 +204,7 @@ func (h *SuperAdminHandler) ListOwners(c *gin.Context) {
 		})
 	}
 
-	c.JSON(200, owners)
+	c.JSON(200, gin.H{"owners": owners})
 }
 
 // GET /api/super-admin/users - List all users (SUPER_ADMIN only)

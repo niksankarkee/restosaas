@@ -113,9 +113,10 @@ function SuperAdminDashboardContent() {
   const fetchOwners = async () => {
     try {
       const response = await api.get('/super-admin/owners');
-      setOwners(response.data);
+      setOwners(response.data.owners || []);
     } catch (error) {
       console.error('Failed to fetch owners:', error);
+      setOwners([]);
     }
   };
 
@@ -142,9 +143,10 @@ function SuperAdminDashboardContent() {
   const fetchRestaurants = async () => {
     try {
       const response = await api.get('/super-admin/restaurants');
-      setRestaurants(response.data);
+      setRestaurants(response.data.restaurants || []);
     } catch (error) {
       console.error('Failed to fetch restaurants:', error);
+      setRestaurants([]);
     }
   };
 
@@ -474,7 +476,7 @@ function SuperAdminDashboardContent() {
             </div>
 
             <div className='grid gap-4'>
-              {owners.length === 0 ? (
+              {!owners || owners.length === 0 ? (
                 <Card>
                   <CardContent className='text-center py-12'>
                     <h3 className='text-lg font-semibold text-gray-900 mb-2'>
@@ -560,7 +562,7 @@ function SuperAdminDashboardContent() {
             </div>
 
             <div className='grid gap-4'>
-              {restaurants.length === 0 ? (
+              {!restaurants || restaurants.length === 0 ? (
                 <Card>
                   <CardContent className='text-center py-12'>
                     <h3 className='text-lg font-semibold text-gray-900 mb-2'>

@@ -1,6 +1,6 @@
 'use client';
 
-import { forwardRef } from 'react';
+import React, { forwardRef } from 'react';
 import { cva, type VariantProps } from 'class-variance-authority';
 import { cn } from '@/lib/utils';
 
@@ -47,6 +47,7 @@ export interface EnhancedButtonProps
   loading?: boolean;
   leftIcon?: React.ReactNode;
   rightIcon?: React.ReactNode;
+  asChild?: boolean;
 }
 
 const EnhancedButton = forwardRef<HTMLButtonElement, EnhancedButtonProps>(
@@ -60,17 +61,13 @@ const EnhancedButton = forwardRef<HTMLButtonElement, EnhancedButtonProps>(
       rightIcon,
       children,
       disabled,
+      asChild = false,
       ...props
     },
     ref
   ) => {
-    return (
-      <button
-        className={cn(buttonVariants({ variant, size, className }))}
-        ref={ref}
-        disabled={disabled || loading}
-        {...props}
-      >
+    const buttonContent = (
+      <>
         {loading && (
           <svg
             className='mr-2 h-4 w-4 animate-spin'
@@ -96,6 +93,32 @@ const EnhancedButton = forwardRef<HTMLButtonElement, EnhancedButtonProps>(
         {!loading && leftIcon && <span className='mr-2'>{leftIcon}</span>}
         {children}
         {!loading && rightIcon && <span className='ml-2'>{rightIcon}</span>}
+      </>
+    );
+
+    if (asChild) {
+      // When asChild is true, clone the child element and apply button styles
+      return React.cloneElement(
+        children as React.ReactElement,
+        {
+          ...props,
+          className: cn(
+            buttonVariants({ variant, size, className }),
+            ((children as React.ReactElement).props as any)?.className
+          ),
+          disabled: disabled || loading,
+        } as any
+      );
+    }
+
+    return (
+      <button
+        className={cn(buttonVariants({ variant, size, className }))}
+        ref={ref}
+        disabled={disabled || loading}
+        {...props}
+      >
+        {buttonContent}
       </button>
     );
   }

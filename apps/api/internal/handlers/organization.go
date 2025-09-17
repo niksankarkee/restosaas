@@ -120,19 +120,26 @@ func (h *OrganizationHandler) GetMyOrganization(c *gin.Context) {
 
 	// Get organization members
 	var members []db.OrgMember
-	if err := h.DB.Where("org_id = ?", org.ID).Preload("User").Find(&members).Error; err != nil {
+	if err := h.DB.Where("org_id = ?", org.ID).Find(&members).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch members"})
 		return
 	}
 
+	// Get user details for each member
 	var memberResponses []OrganizationMemberResponse
 	for _, m := range members {
+		var user db.User
+		if err := h.DB.Where("id = ?", m.UserID).First(&user).Error; err != nil {
+			// Skip members with invalid user references
+			continue
+		}
+
 		memberResponses = append(memberResponses, OrganizationMemberResponse{
 			ID:          m.ID.String(),
 			UserID:      m.UserID.String(),
 			Role:        string(m.Role),
-			DisplayName: m.User.DisplayName,
-			Email:       m.User.Email,
+			DisplayName: user.DisplayName,
+			Email:       user.Email,
 		})
 	}
 
