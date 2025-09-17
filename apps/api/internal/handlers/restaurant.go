@@ -397,7 +397,7 @@ func (h *RestaurantHandler) GetMenus(c *gin.Context) {
 
 	// Get menus for this restaurant
 	var menus []db.Menu
-	if err := h.DB.Where("restaurant_id = ?", restaurantUUID).Preload("Courses").Find(&menus).Error; err != nil {
+	if err := h.DB.Where("restaurant_id = ?", restaurantUUID).Find(&menus).Error; err != nil {
 		c.JSON(500, gin.H{"error": "failed to fetch menus"})
 		return
 	}
@@ -405,9 +405,16 @@ func (h *RestaurantHandler) GetMenus(c *gin.Context) {
 	// Convert to response format
 	var response []MenuResponse
 	for _, menu := range menus {
-		var courses []CourseResponse
-		for _, course := range menu.Courses {
-			courses = append(courses, CourseResponse{
+		// Get courses for this menu separately
+		var courses []db.Course
+		if err := h.DB.Where("menu_id = ?", menu.ID).Find(&courses).Error; err != nil {
+			c.JSON(500, gin.H{"error": "failed to fetch courses"})
+			return
+		}
+
+		var courseResponses []CourseResponse
+		for _, course := range courses {
+			courseResponses = append(courseResponses, CourseResponse{
 				ID:       course.ID.String(),
 				Name:     course.Name,
 				Price:    course.Price,
@@ -419,7 +426,7 @@ func (h *RestaurantHandler) GetMenus(c *gin.Context) {
 			ID:          menu.ID.String(),
 			Title:       menu.Title,
 			Description: menu.Description,
-			Courses:     courses,
+			Courses:     courseResponses,
 		})
 	}
 
@@ -631,7 +638,7 @@ func (h *RestaurantHandler) ListAllRestaurants(c *gin.Context) {
 		return
 	}
 
-	c.JSON(200, restaurants)
+	c.JSON(200, gin.H{"restaurants": restaurants})
 }
 
 // GET /api/super-admin/restaurants/:id - Get restaurant by ID (SUPER_ADMIN only)
