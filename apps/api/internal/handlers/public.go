@@ -323,6 +323,7 @@ func (h *PublicHandler) CreateReservation(c *gin.Context) {
 		StartsAt       string                              `json:"startsAt"`
 		Duration       int                                 `json:"duration"`
 		Party          int                                 `json:"party"`
+		CourseID       *string                             `json:"courseId,omitempty"` // Optional course ID
 		Customer       struct{ Name, Email, Phone string } `json:"customer"`
 	}
 	var req Req
@@ -341,8 +342,22 @@ func (h *PublicHandler) CreateReservation(c *gin.Context) {
 		return
 	}
 	// customer
-	cust := db.Customer{Email: req.Customer.Email, Phone: req.Customer.Phone, Name: req.Customer.Name}
-	h.DB.Where("email = ? AND phone = ?", cust.Email, cust.Phone).FirstOrCreate(&cust)
+	var cust db.Customer
+	err = h.DB.Where("email = ? AND phone = ?", req.Customer.Email, req.Customer.Phone).First(&cust).Error
+	if err != nil {
+		// Customer doesn't exist, create new one
+		cust = db.Customer{
+			ID:        uuid.New(),
+			Email:     req.Customer.Email,
+			Phone:     req.Customer.Phone,
+			Name:      req.Customer.Name,
+			CreatedAt: time.Now(),
+		}
+		if err := h.DB.Create(&cust).Error; err != nil {
+			c.JSON(500, gin.H{"error": "failed to create customer"})
+			return
+		}
+	}
 	// capacity
 	end := start.Add(time.Duration(req.Duration) * time.Minute)
 	var used int64
@@ -354,7 +369,28 @@ func (h *PublicHandler) CreateReservation(c *gin.Context) {
 		c.JSON(409, gin.H{"error": "restaurant is full at that time"})
 		return
 	}
-	resv := db.Reservation{RestaurantID: resto.ID, CustomerID: cust.ID, StartsAt: start, DurationMin: req.Duration, PartySize: req.Party, Status: db.ResvPending}
+	// Parse course ID if provided
+	var courseID *uuid.UUID
+	if req.CourseID != nil && *req.CourseID != "" {
+		parsedCourseID, err := uuid.Parse(*req.CourseID)
+		if err != nil {
+			c.JSON(400, gin.H{"error": "invalid course ID"})
+			return
+		}
+		courseID = &parsedCourseID
+	}
+
+	resv := db.Reservation{
+		ID:           uuid.New(),
+		RestaurantID: resto.ID,
+		CustomerID:   cust.ID,
+		CourseID:     courseID, // Include course ID if provided
+		StartsAt:     start,
+		DurationMin:  req.Duration,
+		PartySize:    req.Party,
+		Status:       db.ResvPending,
+		CreatedAt:    time.Now(),
+	}
 	if err := h.DB.Create(&resv).Error; err != nil {
 		c.JSON(500, gin.H{"error": err.Error()})
 		return
@@ -406,86 +442,4 @@ func (h *PublicHandler) CreateReview(c *gin.Context) {
 		return
 	}
 	c.JSON(201, rev)
-}
-
-func (h *PublicHandler) GetRestaurantMenus(c *gin.Context) {
-	slug := c.Param("slug")
-	var r db.Restaurant
-	if err := h.DB.Where("slug = ?", slug).First(&r).Error; err != nil {
-		if err == gorm.ErrRecordNotFound {
-			c.JSON(404, gin.H{"error": "restaurant not found"})
-			return
-		}
-		c.JSON(500, gin.H{"error": "failed to fetch restaurant"})
-		return
-	}
-
-	// Get menus separately since foreign key relationships are disabled
-	var dbMenus []db.Menu
-	if err := h.DB.Where("restaurant_id = ?", r.ID).Find(&dbMenus).Error; err != nil {
-		c.JSON(500, gin.H{"error": "failed to fetch menus"})
-		return
-	}
-
-	// Convert to response format
-	var menus []struct {
-		ID          string `json:"id"`
-		Title       string `json:"title"`
-		Description string `json:"description"`
-		Courses     []struct {
-			ID       string `json:"id"`
-			Name     string `json:"name"`
-			Price    int    `json:"price"`
-			ImageURL string `json:"imageUrl"`
-		} `json:"courses"`
-	}
-
-	for _, menu := range dbMenus {
-		// Get courses for this menu
-		var dbCourses []db.Course
-		if err := h.DB.Where("menu_id = ?", menu.ID).Find(&dbCourses).Error; err != nil {
-			c.JSON(500, gin.H{"error": "failed to fetch courses"})
-			return
-		}
-
-		var courses []struct {
-			ID       string `json:"id"`
-			Name     string `json:"name"`
-			Price    int    `json:"price"`
-			ImageURL string `json:"imageUrl"`
-		}
-
-		for _, course := range dbCourses {
-			courses = append(courses, struct {
-				ID       string `json:"id"`
-				Name     string `json:"name"`
-				Price    int    `json:"price"`
-				ImageURL string `json:"imageUrl"`
-			}{
-				ID:       course.ID.String(),
-				Name:     course.Name,
-				Price:    course.Price,
-				ImageURL: course.ImageURL,
-			})
-		}
-
-		menus = append(menus, struct {
-			ID          string `json:"id"`
-			Title       string `json:"title"`
-			Description string `json:"description"`
-			Courses     []struct {
-				ID       string `json:"id"`
-				Name     string `json:"name"`
-				Price    int    `json:"price"`
-				ImageURL string `json:"imageUrl"`
-			} `json:"courses"`
-		}{
-			ID:          menu.ID.String(),
-			Title:       menu.Title,
-			Description: menu.Description,
-			Courses:     courses,
-		})
-	}
-
-	c.JSON(200, menus)
 }

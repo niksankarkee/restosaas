@@ -19,6 +19,8 @@ func Mount(r *gin.Engine, gdb *gorm.DB) {
 	superAdmin := handlers.SuperAdminHandler{DB: gdb}
 	restaurant := handlers.RestaurantHandler{DB: gdb}
 	organization := handlers.OrganizationHandler{DB: gdb}
+	menu := handlers.MenuHandler{DB: gdb}
+	course := handlers.CourseHandler{DB: gdb}
 
 	// Health check endpoint
 	r.GET("/health", func(c *gin.Context) {
@@ -37,7 +39,10 @@ func Mount(r *gin.Engine, gdb *gorm.DB) {
 		// Public routes (no auth required, but tokens added if user is authenticated)
 		api.GET("/restaurants", pub.ListRestaurants)
 		api.GET("/restaurants/:slug", pub.GetRestaurant)
-		api.GET("/restaurants/:slug/menus", pub.GetRestaurantMenus)
+		api.GET("/restaurants/:slug/menus", menu.PublicGetMenus)
+		api.GET("/restaurants/:slug/menus/:menuId", menu.PublicGetMenu)
+		api.GET("/restaurants/:slug/courses", course.PublicGetCourses)
+		api.GET("/restaurants/:slug/courses/:courseId", course.PublicGetCourse)
 		api.GET("/restaurants/:slug/reviews", restaurant.GetRestaurantReviews)
 		api.GET("/restaurants/:slug/slots", pub.GetSlots)
 		api.POST("/reservations", pub.CreateReservation)
@@ -122,14 +127,33 @@ func Mount(r *gin.Engine, gdb *gorm.DB) {
 	restaurantGroup := r.Group("/api/owner/restaurants")
 	restaurantGroup.Use(auth.RequireAuth(string(db.RoleOwner), string(db.RoleSuper)), auth.AddTokenToResponse())
 	{
-		restaurantGroup.POST("", restaurant.CreateRestaurant)                       // Create restaurant
-		restaurantGroup.GET("/me", restaurant.GetMyRestaurant)                      // Get my restaurant
-		restaurantGroup.PUT("/:id", restaurant.UpdateRestaurant)                    // Update restaurant
-		restaurantGroup.DELETE("/:id", restaurant.DeleteRestaurant)                 // Delete restaurant
-		restaurantGroup.GET("/:id/menus", restaurant.GetMenus)                      // Get menus
-		restaurantGroup.POST("/:id/menus", restaurant.CreateMenu)                   // Create menu
-		restaurantGroup.POST("/:id/menus/:menuId/courses", restaurant.CreateCourse) // Create course
-		restaurantGroup.POST("/:id/hours", restaurant.SetOpeningHours)              // Set opening hours
-		restaurantGroup.POST("/:id/images", restaurant.UploadImages)                // Upload images
+		restaurantGroup.POST("", restaurant.CreateRestaurant)          // Create restaurant
+		restaurantGroup.GET("/me", restaurant.GetMyRestaurant)         // Get my restaurant
+		restaurantGroup.PUT("/:id", restaurant.UpdateRestaurant)       // Update restaurant
+		restaurantGroup.DELETE("/:id", restaurant.DeleteRestaurant)    // Delete restaurant
+		restaurantGroup.POST("/:id/hours", restaurant.SetOpeningHours) // Set opening hours
+		restaurantGroup.POST("/:id/images", restaurant.UploadImages)   // Upload images
+	}
+
+	// Menu management routes (OWNER only)
+	menuGroup := r.Group("/api/owner/restaurants/:id/menus")
+	menuGroup.Use(auth.RequireAuth(string(db.RoleOwner), string(db.RoleSuper)), auth.AddTokenToResponse())
+	{
+		menuGroup.GET("", menu.ListMenus)             // Get menus
+		menuGroup.POST("", menu.CreateMenu)           // Create menu
+		menuGroup.GET("/:menuId", menu.GetMenu)       // Get menu
+		menuGroup.PUT("/:menuId", menu.UpdateMenu)    // Update menu
+		menuGroup.DELETE("/:menuId", menu.DeleteMenu) // Delete menu
+	}
+
+	// Course management routes (OWNER only)
+	courseGroup := r.Group("/api/owner/restaurants/:id/courses")
+	courseGroup.Use(auth.RequireAuth(string(db.RoleOwner), string(db.RoleSuper)), auth.AddTokenToResponse())
+	{
+		courseGroup.GET("", course.ListCourses)               // Get courses
+		courseGroup.POST("", course.CreateCourse)             // Create course
+		courseGroup.GET("/:courseId", course.GetCourse)       // Get course
+		courseGroup.PUT("/:courseId", course.UpdateCourse)    // Update course
+		courseGroup.DELETE("/:courseId", course.DeleteCourse) // Delete course
 	}
 }

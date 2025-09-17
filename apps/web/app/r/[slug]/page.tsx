@@ -16,7 +16,6 @@ import {
   MessageSquare,
   Navigation,
 } from 'lucide-react';
-import { ViewMenuDialog } from '@/components/view-menu-dialog';
 import { WriteReviewDialog } from '@/components/write-review-dialog';
 import { EnhancedReservationDialog } from '@/components/enhanced-reservation-dialog';
 import { RestaurantGallery } from '@/components/restaurant-gallery';
@@ -95,13 +94,79 @@ export default function RestaurantPage({
 }) {
   const [restaurant, setRestaurant] = useState<Restaurant | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [isViewMenuOpen, setIsViewMenuOpen] = useState(false);
+  const [menus, setMenus] = useState<any[]>([]);
+  const [courses, setCourses] = useState<any[]>([]);
+  const [isMenuLoading, setIsMenuLoading] = useState(false);
+  const [menuTab, setMenuTab] = useState<'all' | 'courses' | 'drinks'>('all');
+  const [selectedCourse, setSelectedCourse] = useState<any>(null);
   const [isWriteReviewOpen, setIsWriteReviewOpen] = useState(false);
   const [isMakeReservationOpen, setIsMakeReservationOpen] = useState(false);
 
   useEffect(() => {
     fetchRestaurant();
   }, [params.slug]);
+
+  useEffect(() => {
+    if (restaurant?.Slug) {
+      fetchMenuData();
+    }
+  }, [restaurant?.Slug]);
+
+  const fetchMenuData = async () => {
+    if (!restaurant?.Slug) return;
+
+    try {
+      setIsMenuLoading(true);
+      const [menusResponse, coursesResponse] = await Promise.all([
+        api.get(`/restaurants/${restaurant.Slug}/menus`),
+        api.get(`/restaurants/${restaurant.Slug}/courses`),
+      ]);
+
+      setMenus(
+        Array.isArray(menusResponse.data)
+          ? menusResponse.data
+          : menusResponse.data.menus || []
+      );
+      setCourses(
+        Array.isArray(coursesResponse.data)
+          ? coursesResponse.data
+          : coursesResponse.data.courses || []
+      );
+    } catch (error) {
+      console.error('Failed to fetch menu data:', error);
+    } finally {
+      setIsMenuLoading(false);
+    }
+  };
+
+  const getFilteredMenus = () => {
+    switch (menuTab) {
+      case 'drinks':
+        return menus.filter((menu) => menu.type === 'DRINK');
+      case 'courses':
+        return [];
+      case 'all':
+      default:
+        return menus;
+    }
+  };
+
+  const truncateContent = (content: string, maxLength: number = 150) => {
+    if (!content) return '';
+    if (content.length <= maxLength) return content;
+    return content.substring(0, maxLength) + '...';
+  };
+
+  const handleCourseClick = (course: any) => {
+    // Navigate to full page course view
+    window.location.href = `/r/${params.slug}/courses/${course.id}`;
+  };
+
+  const handleCourseReservation = (course: any) => {
+    // Set the course for reservation and open reservation dialog
+    setSelectedCourse(course);
+    setIsMakeReservationOpen(true);
+  };
 
   const fetchRestaurant = async () => {
     try {
@@ -291,14 +356,6 @@ export default function RestaurantPage({
             size='lg'
             variant='outline'
             className='flex-1'
-            onClick={() => setIsViewMenuOpen(true)}
-          >
-            View Menu
-          </Button>
-          <Button
-            size='lg'
-            variant='outline'
-            className='flex-1'
             onClick={() => setIsWriteReviewOpen(true)}
           >
             Write a Review
@@ -439,23 +496,229 @@ export default function RestaurantPage({
         </TabsContent>
 
         <TabsContent value='menu' className='mt-6'>
-          <Card>
-            <CardHeader>
-              <CardTitle className='flex items-center space-x-2'>
-                <Utensils className='h-5 w-5' />
-                <span>Restaurant Menu</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Button
-                onClick={() => setIsViewMenuOpen(true)}
-                className='w-full'
-                size='lg'
-              >
-                View Full Menu
-              </Button>
-            </CardContent>
-          </Card>
+          <div className='space-y-6'>
+            {/* Sub-tabs for Menu, Course, Drink */}
+            <Tabs
+              value={menuTab}
+              onValueChange={(value) =>
+                setMenuTab(value as 'all' | 'courses' | 'drinks')
+              }
+            >
+              <TabsList className='grid w-full grid-cols-3'>
+                <TabsTrigger value='all'>Menu Items</TabsTrigger>
+                <TabsTrigger value='courses'>Courses</TabsTrigger>
+                <TabsTrigger value='drinks'>Drinks</TabsTrigger>
+              </TabsList>
+
+              <TabsContent value='all' className='mt-6'>
+                {isMenuLoading ? (
+                  <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6'>
+                    {[1, 2, 3, 4, 5, 6].map((i) => (
+                      <div key={i} className='animate-pulse'>
+                        <div className='h-48 bg-gray-200 rounded mb-4'></div>
+                        <div className='h-4 bg-gray-200 rounded w-3/4 mb-2'></div>
+                        <div className='h-3 bg-gray-200 rounded w-1/2'></div>
+                      </div>
+                    ))}
+                  </div>
+                ) : menus.length > 0 ? (
+                  <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6'>
+                    {menus.map((menu) => (
+                      <Card
+                        key={menu.id}
+                        className='overflow-hidden hover:shadow-md transition-shadow'
+                      >
+                        {menu.imageUrl && (
+                          <div className='aspect-video overflow-hidden'>
+                            <img
+                              src={menu.imageUrl}
+                              alt={menu.name}
+                              className='w-full h-full object-cover'
+                            />
+                          </div>
+                        )}
+                        <CardHeader>
+                          <CardTitle className='text-lg'>{menu.name}</CardTitle>
+                          <div className='flex items-center gap-2'>
+                            <Badge
+                              variant={
+                                menu.type === 'DRINK' ? 'default' : 'secondary'
+                              }
+                            >
+                              {menu.type}
+                            </Badge>
+                            <Badge variant='outline'>{menu.mealType}</Badge>
+                            <span className='text-lg font-semibold text-green-600'>
+                              ${(menu.price / 100).toFixed(2)}
+                            </span>
+                          </div>
+                        </CardHeader>
+                        <CardContent>
+                          <p className='text-gray-600 text-sm'>
+                            {menu.shortDesc}
+                          </p>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                ) : (
+                  <Card>
+                    <CardContent className='text-center py-8'>
+                      <p className='text-gray-600'>No menu items available.</p>
+                    </CardContent>
+                  </Card>
+                )}
+              </TabsContent>
+
+              <TabsContent value='courses' className='mt-6'>
+                {isMenuLoading ? (
+                  <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6'>
+                    {[1, 2, 3, 4, 5, 6].map((i) => (
+                      <div key={i} className='animate-pulse'>
+                        <div className='h-48 bg-gray-200 rounded mb-4'></div>
+                        <div className='h-4 bg-gray-200 rounded w-3/4 mb-2'></div>
+                        <div className='h-3 bg-gray-200 rounded w-1/2'></div>
+                      </div>
+                    ))}
+                  </div>
+                ) : courses.length > 0 ? (
+                  <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6'>
+                    {courses.map((course) => (
+                      <Card
+                        key={course.id}
+                        className='overflow-hidden hover:shadow-lg transition-all duration-300 cursor-pointer transform hover:scale-105'
+                        onClick={() => handleCourseClick(course)}
+                      >
+                        {course.imageUrl && (
+                          <div className='aspect-video overflow-hidden'>
+                            <img
+                              src={course.imageUrl}
+                              alt={course.title}
+                              className='w-full h-full object-cover'
+                            />
+                          </div>
+                        )}
+                        <CardHeader>
+                          <CardTitle className='text-lg'>
+                            {course.title}
+                          </CardTitle>
+                          <div className='flex items-center gap-4 text-sm text-gray-600'>
+                            <div className='flex items-center gap-1'>
+                              <span
+                                className={
+                                  course.originalPrice ? 'line-through' : ''
+                                }
+                              >
+                                ${(course.coursePrice / 100).toFixed(2)}
+                              </span>
+                              {course.originalPrice && (
+                                <span className='text-green-600 font-semibold'>
+                                  ${(course.originalPrice / 100).toFixed(2)}
+                                </span>
+                              )}
+                            </div>
+                            <div className='flex items-center gap-1'>
+                              <span>{course.numberOfItems} items</span>
+                            </div>
+                            <div className='flex items-center gap-1'>
+                              <span>
+                                {Math.floor(course.stayTime / 60)}h{' '}
+                                {course.stayTime % 60}m
+                              </span>
+                            </div>
+                          </div>
+                        </CardHeader>
+                        <CardContent>
+                          <p className='text-gray-600 text-sm mb-3'>
+                            {course.description}
+                          </p>
+                          {course.courseContent && (
+                            <div
+                              className='prose prose-sm max-w-none'
+                              dangerouslySetInnerHTML={{
+                                __html: truncateContent(
+                                  course.courseContent,
+                                  100
+                                ),
+                              }}
+                            />
+                          )}
+                          <div className='mt-4 flex justify-center'>
+                            <Button
+                              size='sm'
+                              className='w-full'
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleCourseClick(course);
+                              }}
+                            >
+                              View Full Course
+                            </Button>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                ) : (
+                  <Card>
+                    <CardContent className='text-center py-8'>
+                      <p className='text-gray-600'>No courses available.</p>
+                    </CardContent>
+                  </Card>
+                )}
+              </TabsContent>
+
+              <TabsContent value='drinks' className='mt-6'>
+                {isMenuLoading ? (
+                  <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6'>
+                    {[1, 2, 3].map((i) => (
+                      <div key={i} className='animate-pulse'>
+                        <div className='h-48 bg-gray-200 rounded mb-4'></div>
+                        <div className='h-4 bg-gray-200 rounded w-3/4 mb-2'></div>
+                        <div className='h-3 bg-gray-200 rounded w-1/2'></div>
+                      </div>
+                    ))}
+                  </div>
+                ) : getFilteredMenus().length > 0 ? (
+                  <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6'>
+                    {getFilteredMenus().map((menu) => (
+                      <Card key={menu.id} className='overflow-hidden'>
+                        {menu.imageUrl && (
+                          <div className='aspect-video overflow-hidden'>
+                            <img
+                              src={menu.imageUrl}
+                              alt={menu.name}
+                              className='w-full h-full object-cover'
+                            />
+                          </div>
+                        )}
+                        <CardHeader>
+                          <CardTitle className='text-lg'>{menu.name}</CardTitle>
+                          <div className='flex items-center gap-2'>
+                            <Badge variant='outline'>{menu.mealType}</Badge>
+                            <span className='text-lg font-semibold text-green-600'>
+                              ${(menu.price / 100).toFixed(2)}
+                            </span>
+                          </div>
+                        </CardHeader>
+                        <CardContent>
+                          <p className='text-gray-600 text-sm'>
+                            {menu.shortDesc}
+                          </p>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                ) : (
+                  <Card>
+                    <CardContent className='text-center py-8'>
+                      <p className='text-gray-600'>No drinks available.</p>
+                    </CardContent>
+                  </Card>
+                )}
+              </TabsContent>
+            </Tabs>
+          </div>
         </TabsContent>
 
         <TabsContent value='gallery' className='mt-6'>
@@ -480,11 +743,6 @@ export default function RestaurantPage({
       </Tabs>
 
       {/* Dialogs */}
-      <ViewMenuDialog
-        isOpen={isViewMenuOpen}
-        onClose={() => setIsViewMenuOpen(false)}
-        restaurantSlug={params.slug}
-      />
 
       <WriteReviewDialog
         isOpen={isWriteReviewOpen}
@@ -503,6 +761,7 @@ export default function RestaurantPage({
         restaurantName={restaurant.Name}
         restaurantCapacity={restaurant.Capacity}
         openHours={restaurant.OpenHours}
+        courseId={selectedCourse?.id} // Pass course ID for course-specific reservations
         onReservationSubmitted={() => {
           console.log('Reservation submitted successfully');
         }}
