@@ -21,6 +21,7 @@ import { EnhancedReservationDialog } from '@/components/enhanced-reservation-dia
 import { RestaurantGallery } from '@/components/restaurant-gallery';
 import { RestaurantReviews } from '@/components/restaurant-reviews';
 import { RestaurantMap } from '@/components/restaurant-map';
+import { useAuth } from '@/contexts/auth-context';
 
 interface Restaurant {
   ID: string;
@@ -109,6 +110,7 @@ export default function RestaurantPage({
 }: {
   params: { slug: string };
 }) {
+  const { user } = useAuth();
   const [restaurant, setRestaurant] = useState<Restaurant | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [menus, setMenus] = useState<any[]>([]);
@@ -118,6 +120,7 @@ export default function RestaurantPage({
   const [selectedCourse, setSelectedCourse] = useState<any>(null);
   const [isWriteReviewOpen, setIsWriteReviewOpen] = useState(false);
   const [isMakeReservationOpen, setIsMakeReservationOpen] = useState(false);
+  const [isSettingMainImage, setIsSettingMainImage] = useState(false);
 
   useEffect(() => {
     fetchRestaurant();
@@ -183,6 +186,39 @@ export default function RestaurantPage({
     // Set the course for reservation and open reservation dialog
     setSelectedCourse(course);
     setIsMakeReservationOpen(true);
+  };
+
+  const handleSetMainImage = async (imageId: string) => {
+    if (
+      !restaurant ||
+      !user ||
+      (user.role !== 'OWNER' && user.role !== 'SUPER_ADMIN')
+    ) {
+      return;
+    }
+
+    setIsSettingMainImage(true);
+    try {
+      await api.post(
+        `/owner/restaurants/${restaurant.ID}/images/${imageId}/set-main`
+      );
+
+      // Update local state
+      setRestaurant((prev) => {
+        if (!prev) return null;
+        return {
+          ...prev,
+          Images: prev.Images.map((img) => ({
+            ...img,
+            IsMain: img.ID === imageId,
+          })),
+        };
+      });
+    } catch (error) {
+      console.error('Failed to set main image:', error);
+    } finally {
+      setIsSettingMainImage(false);
+    }
   };
 
   const fetchRestaurant = async () => {
@@ -279,12 +315,31 @@ export default function RestaurantPage({
 
         {/* Main Image */}
         {mainImage && (
-          <div className='mb-6'>
+          <div className='mb-6 relative group'>
             <img
               src={mainImage.URL}
               alt={mainImage.Alt || restaurant.Name}
               className='w-full h-64 md:h-96 object-cover rounded-lg shadow-lg'
             />
+            {/* Set as Main Image Button - Only for Owners and Super Admins */}
+            {user && (user.role === 'OWNER' || user.role === 'SUPER_ADMIN') && (
+              <div className='absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity'>
+                <Button
+                  size='sm'
+                  variant='secondary'
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleSetMainImage(mainImage.ID);
+                  }}
+                  disabled={isSettingMainImage || mainImage.IsMain}
+                  className='bg-white/90 hover:bg-white text-gray-900 z-10'
+                >
+                  <Star className='w-4 h-4 mr-2' />
+                  {mainImage.IsMain ? 'Main Image' : 'Set as Main'}
+                </Button>
+              </div>
+            )}
           </div>
         )}
 
@@ -741,7 +796,13 @@ export default function RestaurantPage({
         </TabsContent>
 
         <TabsContent value='gallery' className='mt-6'>
-          <RestaurantGallery images={restaurant.Images || []} />
+          <RestaurantGallery
+            images={restaurant.Images || []}
+            onSetMainImage={handleSetMainImage}
+            canSetMainImage={
+              !!(user && (user.role === 'OWNER' || user.role === 'SUPER_ADMIN'))
+            }
+          />
         </TabsContent>
 
         <TabsContent value='reviews' className='mt-6'>

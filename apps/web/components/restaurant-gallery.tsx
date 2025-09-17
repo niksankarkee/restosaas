@@ -22,9 +22,15 @@ interface Image {
 
 interface RestaurantGalleryProps {
   images: Image[];
+  onSetMainImage?: (imageId: string) => void;
+  canSetMainImage?: boolean;
 }
 
-export function RestaurantGallery({ images }: RestaurantGalleryProps) {
+export function RestaurantGallery({
+  images,
+  onSetMainImage,
+  canSetMainImage = false,
+}: RestaurantGalleryProps) {
   const [selectedImage, setSelectedImage] = useState<Image | null>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
 
@@ -93,9 +99,36 @@ export function RestaurantGallery({ images }: RestaurantGalleryProps) {
                   Main
                 </Badge>
               )}
-              <div className='absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all duration-300 flex items-center justify-center'>
-                <div className='opacity-0 group-hover:opacity-100 transition-opacity duration-300'>
-                  <Button size='sm' variant='secondary'>
+              {canSetMainImage && onSetMainImage && !image.IsMain && (
+                <Button
+                  size='sm'
+                  variant='secondary'
+                  className='absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity bg-white/90 hover:bg-white text-gray-900 z-10'
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    onSetMainImage(image.ID);
+                  }}
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                  }}
+                >
+                  <Star className='h-3 w-3 mr-1' />
+                  Set Main
+                </Button>
+              )}
+              <div className='absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all duration-300 flex items-center justify-center pointer-events-none'>
+                <div className='opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-auto'>
+                  <Button
+                    size='sm'
+                    variant='secondary'
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      openImageModal(image, index);
+                    }}
+                  >
                     View Full Size
                   </Button>
                 </div>
