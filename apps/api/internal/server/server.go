@@ -10,6 +10,7 @@ import (
 	"github.com/joho/godotenv"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
+	"gorm.io/gorm/schema"
 )
 
 type App struct {
@@ -22,6 +23,10 @@ func New() *App {
 	dsn := os.Getenv("DB_DSN")
 	gdb, err := gorm.Open(postgres.Open(dsn), &gorm.Config{
 		DisableForeignKeyConstraintWhenMigrating: true,
+		NamingStrategy: schema.NamingStrategy{
+			TablePrefix:   "",
+			SingularTable: false,
+		},
 	})
 	if err != nil {
 		log.Fatalf("db connect: %v", err)

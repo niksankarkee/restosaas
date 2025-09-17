@@ -108,10 +108,7 @@ function CourseDetailContent() {
   };
 
   const formatPrice = (price: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-    }).format(price / 100);
+    return `Rs ${price}`;
   };
 
   const formatTime = (minutes: number) => {
@@ -366,7 +363,7 @@ function CourseForm({
       ...formData,
       coursePrice: Math.round(formData.coursePrice * 100), // Convert to cents and round
       originalPrice: formData.originalPrice
-        ? Math.round(parseFloat(formData.originalPrice) * 100)
+        ? Math.round(parseFloat(String(formData.originalPrice)) * 100)
         : null,
     };
     onSubmit(submitData);
@@ -422,7 +419,7 @@ function CourseForm({
       <div className='grid grid-cols-1 md:grid-cols-3 gap-4'>
         <div>
           <label className='block text-sm font-medium text-gray-700 mb-1'>
-            Course Price ($) *
+            Course Price (Rs) *
           </label>
           <input
             type='number'
@@ -440,7 +437,7 @@ function CourseForm({
         </div>
         <div>
           <label className='block text-sm font-medium text-gray-700 mb-1'>
-            Original Price ($)
+            Original Price (Rs)
           </label>
           <input
             type='number'

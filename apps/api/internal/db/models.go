@@ -32,6 +32,14 @@ const (
 	RoleCustomer Role = "CUSTOMER"
 )
 
+type OAuthProvider string
+
+const (
+	OAuthGoogle   OAuthProvider = "google"
+	OAuthFacebook OAuthProvider = "facebook"
+	OAuthTwitter  OAuthProvider = "twitter"
+)
+
 type User struct {
 	ID          uuid.UUID `gorm:"type:uuid;primaryKey"`
 	Email       string    `gorm:"uniqueIndex;not null"`
@@ -39,6 +47,15 @@ type User struct {
 	DisplayName string
 	Role        Role `gorm:"type:text;not null"`
 	CreatedAt   time.Time
+	// OAuth fields
+	OAuthProvider string `gorm:"column:oauth_provider"` // google, facebook, twitter
+	OAuthID       string `gorm:"column:oauth_id"`       // OAuth provider's user ID
+	AvatarURL     string `gorm:"column:avatar_url"`     // Profile picture from OAuth
+}
+
+// TableName explicitly sets the table name for GORM
+func (User) TableName() string {
+	return "users"
 }
 
 type Organization struct {
@@ -63,10 +80,12 @@ type Restaurant struct {
 	Slug        string    `gorm:"uniqueIndex;not null"`
 	Name        string    `gorm:"not null"`
 	Slogan      string    `gorm:"not null"`
-	Place       string    `gorm:"not null;index"` // Near city or some place
-	Genre       string    `gorm:"not null;index"` // Cuisine type
-	Budget      string    `gorm:"not null"`       // Budget range (e.g., "$$", "$$$")
-	Title       string    `gorm:"not null"`       // Restaurant title
+	Place       string    `gorm:"not null;index"`                      // Near city or some place
+	Genre       string    `gorm:"not null;index"`                      // Cuisine type
+	Budget      string    `gorm:"not null"`                            // Budget range (e.g., "$$", "$$$") - kept for backward compatibility
+	MinPrice    int       `gorm:"column:min_price;not null;default:0"` // Minimum price in Rs
+	MaxPrice    int       `gorm:"column:max_price;not null;default:0"` // Maximum price in Rs
+	Title       string    `gorm:"not null"`                            // Restaurant title
 	Description string    `gorm:"type:text"`
 	Area        string    `gorm:"index"`
 	Address     string
@@ -83,10 +102,14 @@ type Restaurant struct {
 type OpeningHour struct {
 	ID           uuid.UUID `gorm:"type:uuid;primaryKey"`
 	RestaurantID uuid.UUID `gorm:"type:uuid;index;not null"`
-	Weekday      int       `gorm:"not null"`               // 0=Sunday, 1=Monday, ..., 6=Saturday
-	OpenTime     string    `gorm:"not null"`               // Format: "09:00"
-	CloseTime    string    `gorm:"not null"`               // Format: "22:00"
-	IsClosed     bool      `gorm:"not null;default:false"` // If restaurant is closed on this day
+	Weekday      int       `gorm:"not null"`                                // 0=Sunday, 1=Monday, ..., 6=Saturday
+	OpenTime     string    `gorm:"column:open_time;not null"`               // Format: "09:00"
+	CloseTime    string    `gorm:"column:close_time;not null"`              // Format: "22:00"
+	IsClosed     bool      `gorm:"column:is_closed;not null;default:false"` // If restaurant is closed on this day
+}
+
+func (OpeningHour) TableName() string {
+	return "opening_hours"
 }
 
 type MenuType string
@@ -220,6 +243,9 @@ func AutoMigrate(db *gorm.DB) error {
 		password VARCHAR(255),
 		display_name VARCHAR(255),
 		role VARCHAR(50) NOT NULL,
+		oauth_provider VARCHAR(50),
+		oauth_id VARCHAR(255),
+		avatar_url VARCHAR(500),
 		created_at TIMESTAMP
 	);
 	

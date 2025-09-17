@@ -21,6 +21,7 @@ func Mount(r *gin.Engine, gdb *gorm.DB) {
 	organization := handlers.OrganizationHandler{DB: gdb}
 	menu := handlers.MenuHandler{DB: gdb}
 	course := handlers.CourseHandler{DB: gdb}
+	oauth := handlers.OAuthHandler{DB: gdb}
 
 	// Health check endpoint
 	r.GET("/health", func(c *gin.Context) {
@@ -58,6 +59,11 @@ func Mount(r *gin.Engine, gdb *gorm.DB) {
 		// User authentication routes (PUBLIC - no auth required)
 		api.POST("/auth/register", usr.CreateUser) // Register new user
 		api.POST("/auth/login", usr.Login)         // Login user
+
+		// OAuth routes (PUBLIC - no auth required)
+		api.POST("/auth/oauth/google", oauth.GoogleCallback)
+		api.POST("/auth/oauth/facebook", oauth.FacebookCallback)
+		api.POST("/auth/oauth/twitter", oauth.TwitterCallback)
 	}
 
 	// General user routes (require authentication for any role)

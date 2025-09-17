@@ -87,6 +87,23 @@ const WEEKDAYS = [
   'Saturday',
 ];
 
+// Helper function to format price range
+const formatPriceRange = (restaurant: Restaurant): string => {
+  // If budget contains a range format like "500-1500" or "500 ~ 1500"
+  if (
+    restaurant.Budget &&
+    (restaurant.Budget.includes('-') || restaurant.Budget.includes('~'))
+  ) {
+    return `Rs (${restaurant.Budget})`;
+  }
+  // If budget is a single value
+  if (restaurant.Budget && !restaurant.Budget.includes('$')) {
+    return `Rs (${restaurant.Budget})`;
+  }
+  // Fallback to old budget format if price range not available
+  return restaurant.Budget.replace(/\$/g, 'Rs ');
+};
+
 export default function RestaurantPage({
   params,
 }: {
@@ -278,12 +295,12 @@ export default function RestaurantPage({
               <CardHeader className='pb-3'>
                 <CardTitle className='text-lg flex items-center'>
                   <DollarSign className='h-5 w-5 mr-2' />
-                  Budget
+                  Price Range
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <p className='text-2xl font-bold text-green-600'>
-                  {restaurant.Budget}
+                  {formatPriceRange(restaurant)}
                 </p>
               </CardContent>
             </Card>
@@ -479,8 +496,10 @@ export default function RestaurantPage({
                   <span className='font-medium'>{restaurant.Genre}</span>
                 </div>
                 <div className='flex justify-between'>
-                  <span className='text-gray-600'>Budget Range:</span>
-                  <span className='font-medium'>{restaurant.Budget}</span>
+                  <span className='text-gray-600'>Price Range:</span>
+                  <span className='font-medium'>
+                    {formatPriceRange(restaurant)}
+                  </span>
                 </div>
                 <div className='flex justify-between'>
                   <span className='text-gray-600'>Location:</span>
@@ -549,7 +568,7 @@ export default function RestaurantPage({
                             </Badge>
                             <Badge variant='outline'>{menu.mealType}</Badge>
                             <span className='text-lg font-semibold text-green-600'>
-                              ${(menu.price / 100).toFixed(2)}
+                              Rs ${menu.price}
                             </span>
                           </div>
                         </CardHeader>
@@ -609,11 +628,11 @@ export default function RestaurantPage({
                                   course.originalPrice ? 'line-through' : ''
                                 }
                               >
-                                ${(course.coursePrice / 100).toFixed(2)}
+                                Rs ${course.coursePrice}
                               </span>
                               {course.originalPrice && (
                                 <span className='text-green-600 font-semibold'>
-                                  ${(course.originalPrice / 100).toFixed(2)}
+                                  Rs ${course.originalPrice}
                                 </span>
                               )}
                             </div>
@@ -697,7 +716,7 @@ export default function RestaurantPage({
                           <div className='flex items-center gap-2'>
                             <Badge variant='outline'>{menu.mealType}</Badge>
                             <span className='text-lg font-semibold text-green-600'>
-                              ${(menu.price / 100).toFixed(2)}
+                              Rs ${menu.price}
                             </span>
                           </div>
                         </CardHeader>

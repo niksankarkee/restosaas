@@ -192,11 +192,11 @@ export default function CourseDetailPage() {
               <CardContent className='space-y-4'>
                 <div className='text-center'>
                   <div className='text-3xl font-bold text-green-600'>
-                    ${(course.coursePrice / 100).toFixed(2)}
+                    Rs ${course.coursePrice}
                   </div>
                   {course.originalPrice && (
                     <div className='text-lg text-gray-500 line-through'>
-                      ${(course.originalPrice / 100).toFixed(2)}
+                      Rs ${course.originalPrice}
                     </div>
                   )}
                 </div>

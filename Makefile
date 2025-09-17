@@ -17,6 +17,9 @@ help:
 	@echo "  docker-down  - Stop services with Docker Compose"
 	@echo "  migrate-up   - Run database migrations"
 	@echo "  migrate-down - Rollback database migrations"
+	@echo "  reset-db     - Reset Docker database (drop and recreate)"
+	@echo "  seed-db      - Seed database with sample data"
+	@echo "  setup-db     - Reset and seed database"
 	@echo "  lint         - Run linting"
 	@echo "  format       - Format code"
 
@@ -55,11 +58,11 @@ test-web:
 # Docker commands
 docker-up:
 	@echo "Starting services with Docker Compose..."
-	docker-compose -f infra/docker-compose.yml up -d
+	docker compose -f infra/docker-compose.yml up -d
 
 docker-down:
 	@echo "Stopping services with Docker Compose..."
-	docker-compose -f infra/docker-compose.yml down
+	docker compose -f infra/docker-compose.yml down
 
 # Database migrations
 migrate-up:
@@ -100,6 +103,22 @@ install:
 	@echo "Installing dependencies..."
 	cd apps/api && go mod download
 	cd apps/web && npm install
+
+# Database reset and seeding
+reset-db:
+	@echo "Resetting Docker database..."
+	docker compose -f infra/docker-compose.yml down -v
+	docker compose -f infra/docker-compose.yml up -d db
+	@echo "Waiting for database to be ready..."
+	sleep 10
+	@echo "Database reset complete!"
+
+seed-db:
+	@echo "Seeding database with sample data..."
+	cd scripts && chmod +x simple-seed.sh && ./simple-seed.sh
+
+setup-db: reset-db seed-db
+	@echo "Database setup complete!"
 
 # Setup development environment
 setup: install docker-up

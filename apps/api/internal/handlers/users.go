@@ -3,6 +3,7 @@ package handlers
 import (
 	"crypto/sha256"
 	"encoding/hex"
+	"fmt"
 	"net/http"
 	"strconv"
 	"time"
@@ -67,6 +68,9 @@ func (h *UserHandler) CreateUser(c *gin.Context) {
 		return
 	}
 
+	// Debug logging
+	fmt.Printf("CreateUser request: %+v\n", req)
+
 	// Check if user already exists
 	var existingUser db.User
 	if err := h.DB.Where("email = ?", req.Email).First(&existingUser).Error; err == nil {
@@ -118,13 +122,13 @@ func (h *UserHandler) CreateUser(c *gin.Context) {
 		})
 
 		if err != nil {
-			c.JSON(500, gin.H{"error": "failed to create user and organization"})
+			c.JSON(500, gin.H{"error": "failed to create user and organization", "details": err.Error()})
 			return
 		}
 	} else {
 		// For non-OWNER users, just create the user
 		if err := h.DB.Create(&user).Error; err != nil {
-			c.JSON(500, gin.H{"error": "failed to create user"})
+			c.JSON(500, gin.H{"error": "failed to create user", "details": err.Error()})
 			return
 		}
 	}
