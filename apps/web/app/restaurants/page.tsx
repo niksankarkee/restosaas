@@ -87,7 +87,7 @@ export default function Restaurants() {
     const fetchRestaurants = async () => {
       setIsLoading(true);
       try {
-        const params: any = {};
+        const params: { page?: number; limit?: number; search?: string } = {};
 
         if (area) params.area = area;
         if (cuisine) params.cuisine = cuisine;

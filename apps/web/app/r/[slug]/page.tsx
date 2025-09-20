@@ -22,6 +22,7 @@ import { RestaurantGallery } from '@/components/restaurant-gallery';
 import { RestaurantReviews } from '@/components/restaurant-reviews';
 import { RestaurantMap } from '@/components/restaurant-map';
 import { useAuth } from '@/contexts/auth-context';
+import type { Menu as ApiMenu, Course as ApiCourse } from '@restosaas/types';
 
 interface Restaurant {
   ID: string;
@@ -57,17 +58,30 @@ interface OpeningHour {
 }
 
 interface Menu {
-  ID: string;
-  Title: string;
-  Description: string;
-  Courses: Course[];
+  id: string;
+  name: string;
+  shortDesc: string;
+  imageUrl?: string;
+  price: number;
+  type: 'FOOD' | 'DRINK';
+  mealType: 'LUNCH' | 'DINNER' | 'BOTH';
+  createdAt: string;
+  updatedAt: string;
 }
 
 interface Course {
-  ID: string;
-  Name: string;
-  Price: number;
-  ImageURL: string;
+  id: string;
+  title: string;
+  description: string;
+  imageUrl?: string;
+  coursePrice: number;
+  originalPrice?: number;
+  numberOfItems: number;
+  stayTime: number;
+  courseContent: string;
+  precautions: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 interface Image {
@@ -113,11 +127,11 @@ export default function RestaurantPage({
   const { user } = useAuth();
   const [restaurant, setRestaurant] = useState<Restaurant | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [menus, setMenus] = useState<any[]>([]);
-  const [courses, setCourses] = useState<any[]>([]);
+  const [menus, setMenus] = useState<Menu[]>([]);
+  const [courses, setCourses] = useState<Course[]>([]);
   const [isMenuLoading, setIsMenuLoading] = useState(false);
   const [menuTab, setMenuTab] = useState<'all' | 'courses' | 'drinks'>('all');
-  const [selectedCourse, setSelectedCourse] = useState<any>(null);
+  const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
   const [isWriteReviewOpen, setIsWriteReviewOpen] = useState(false);
   const [isMakeReservationOpen, setIsMakeReservationOpen] = useState(false);
   const [isSettingMainImage, setIsSettingMainImage] = useState(false);
@@ -177,12 +191,12 @@ export default function RestaurantPage({
     return content.substring(0, maxLength) + '...';
   };
 
-  const handleCourseClick = (course: any) => {
+  const handleCourseClick = (course: Course) => {
     // Navigate to full page course view
     window.location.href = `/r/${params.slug}/courses/${course.id}`;
   };
 
-  const handleCourseReservation = (course: any) => {
+  const handleCourseReservation = (course: Course) => {
     // Set the course for reservation and open reservation dialog
     setSelectedCourse(course);
     setIsMakeReservationOpen(true);

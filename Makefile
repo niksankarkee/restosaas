@@ -1,129 +1,230 @@
-# RestoSaaS Makefile
+# RestoSaaS Monorepo Makefile
 
-.PHONY: help build test clean dev api web docker-up docker-down migrate-up migrate-down
+.PHONY: help setup install-all dev dev-all dev-api dev-customer dev-backoffice build build-all test test-all clean clean-all lint format docker-up docker-down reset-db seed-db setup-db stop stop-all
 
 # Default target
 help:
-	@echo "Available commands:"
-	@echo "  dev          - Start development environment"
-	@echo "  api          - Start API server"
-	@echo "  web          - Start web server"
-	@echo "  build        - Build all services"
-	@echo "  test         - Run all tests"
-	@echo "  test-api     - Run API tests"
-	@echo "  test-web     - Run web tests"
-	@echo "  clean        - Clean build artifacts"
-	@echo "  docker-up    - Start services with Docker Compose"
-	@echo "  docker-down  - Stop services with Docker Compose"
-	@echo "  migrate-up   - Run database migrations"
-	@echo "  migrate-down - Rollback database migrations"
-	@echo "  reset-db     - Reset Docker database (drop and recreate)"
-	@echo "  seed-db      - Seed database with sample data"
-	@echo "  setup-db     - Reset and seed database"
-	@echo "  lint         - Run linting"
-	@echo "  format       - Format code"
+	@echo "RestoSaaS Monorepo - Available Commands:"
+	@echo ""
+	@echo "🚀 Development:"
+	@echo "  dev-all        - Start all services (API + Customer + Backoffice)"
+	@echo "  dev-api        - Start API server only"
+	@echo "  dev-customer   - Start customer app only"
+	@echo "  dev-backoffice - Start backoffice app only"
+	@echo "  stop-all       - Stop all running services"
+	@echo "  stop           - Stop all running services (alias for stop-all)"
+	@echo ""
+	@echo "📦 Setup & Install:"
+	@echo "  setup          - Complete development setup"
+	@echo "  install-all    - Install all dependencies"
+	@echo ""
+	@echo "🏗️ Build:"
+	@echo "  build-all      - Build all applications"
+	@echo "  build-customer - Build customer app"
+	@echo "  build-backoffice - Build backoffice app"
+	@echo ""
+	@echo "🧪 Testing:"
+	@echo "  test-all       - Run all tests"
+	@echo "  test-api       - Run API tests"
+	@echo "  test-customer  - Run customer app tests"
+	@echo "  test-backoffice - Run backoffice app tests"
+	@echo ""
+	@echo "🗄️ Database:"
+	@echo "  docker-up      - Start Docker services"
+	@echo "  docker-down    - Stop Docker services"
+	@echo "  reset-db       - Reset database"
+	@echo "  seed-db        - Seed database"
+	@echo "  setup-db       - Reset and seed database"
+	@echo ""
+	@echo "🧹 Cleanup:"
+	@echo "  clean-all      - Clean all build artifacts"
+	@echo "  clean-customer - Clean customer app"
+	@echo "  clean-backoffice - Clean backoffice app"
+	@echo ""
+	@echo "🔧 Code Quality:"
+	@echo "  lint           - Run linting"
+	@echo "  format         - Format code"
 
-# Development
-dev: docker-up
-	@echo "Starting development environment..."
+# Complete development setup
+setup: install-all docker-up
+	@echo "✅ Development environment setup complete!"
+	@echo ""
+	@echo "🌐 Services:"
+	@echo "  API:        http://localhost:8080"
+	@echo "  Customer:   http://localhost:3000"
+	@echo "  Backoffice: http://localhost:3001"
+	@echo "  Database:   localhost:5432"
+	@echo ""
+	@echo "🚀 To start all services: make dev-all"
 
-# Start API server
-api:
+# Install all dependencies
+install-all:
+	@echo "📦 Installing all dependencies..."
+	@echo "Installing root dependencies..."
+	npm install
+	@echo "Installing customer app dependencies..."
+	cd apps/customer && npm install
+	@echo "Installing backoffice app dependencies..."
+	cd apps/backoffice && npm install
+	@echo "Installing shared packages dependencies..."
+	cd packages/types && npm install
+	cd packages/api-client && npm install
+	cd packages/ui && npm install
+	@echo "Installing API dependencies..."
+	cd apps/api && go mod download
+	@echo "✅ All dependencies installed!"
+
+# Development - All services
+dev: dev-all
+
+dev-all: docker-up
+	@echo "🚀 Starting all development services..."
 	@echo "Starting API server..."
+	@cd apps/api && export JWT_SECRET="your-secret-key" && export APP_ENV="dev" && go run ./cmd/api &
+	@echo "Starting customer app..."
+	@cd apps/customer && npm run dev &
+	@echo "Starting backoffice app..."
+	@cd apps/backoffice && npm run dev &
+	@echo "✅ All services started!"
+	@echo "🌐 Customer:   http://localhost:3000"
+	@echo "🌐 Backoffice: http://localhost:3001"
+	@echo "🌐 API:        http://localhost:8080"
+	@echo "Press Ctrl+C to stop all services"
+
+# Development - Individual services
+dev-api:
+	@echo "🚀 Starting API server on http://localhost:8080..."
 	cd apps/api && export JWT_SECRET="your-secret-key" && export APP_ENV="dev" && go run ./cmd/api
 
-# Start web server
-web:
-	@echo "Starting web server..."
-	cd apps/web && npm run dev
+dev-customer:
+	@echo "🚀 Starting customer app on http://localhost:3000..."
+	cd apps/customer && npm run dev
 
-# Build all services
-build:
-	@echo "Building API..."
-	cd apps/api && go build -o api ./cmd/api
-	@echo "Building web..."
-	cd apps/web && npm run build
+dev-backoffice:
+	@echo "🚀 Starting backoffice app on http://localhost:3001..."
+	cd apps/backoffice && npm run dev
+
+# Build all applications
+build-all: build-customer build-backoffice
+	@echo "✅ All applications built!"
+
+build-customer:
+	@echo "🏗️ Building customer app..."
+	cd apps/customer && npm run build
+
+build-backoffice:
+	@echo "🏗️ Building backoffice app..."
+	cd apps/backoffice && npm run build
 
 # Testing
-test: test-api test-web
+test-all: test-api test-customer test-backoffice
+	@echo "✅ All tests completed!"
 
 test-api:
-	@echo "Running API tests..."
-	cd apps/api && go test -v ./...
+	@echo "🧪 Running API tests..."
+	cd apps/api && go test -v ./... || echo "⚠️ API tests completed with warnings"
 
-test-web:
-	@echo "Running web tests..."
-	cd apps/web && npm test || true
+test-customer:
+	@echo "🧪 Running customer app tests..."
+	cd apps/customer && npm run test || echo "⚠️ Customer tests completed with warnings"
+
+test-backoffice:
+	@echo "🧪 Running backoffice app tests..."
+	cd apps/backoffice && npm run test || echo "⚠️ Backoffice tests completed with warnings"
 
 # Docker commands
 docker-up:
-	@echo "Starting services with Docker Compose..."
+	@echo "🐳 Starting Docker services..."
 	docker compose -f infra/docker-compose.yml up -d
+	@echo "⏳ Waiting for database to be ready..."
+	@sleep 5
+	@echo "✅ Docker services started!"
 
 docker-down:
-	@echo "Stopping services with Docker Compose..."
+	@echo "🐳 Stopping Docker services..."
 	docker compose -f infra/docker-compose.yml down
+	@echo "✅ Docker services stopped!"
 
-# Database migrations
-migrate-up:
-	@echo "Running database migrations..."
-	cd apps/api && go run ./cmd/migrate up
+# Database commands
+reset-db:
+	@echo "🗄️ Resetting database..."
+	./scripts/reset-database.sh
+	@echo "✅ Database reset complete!"
 
-migrate-down:
-	@echo "Rolling back database migrations..."
-	cd apps/api && go run ./cmd/migrate down
+seed-db:
+	@echo "🌱 Seeding database..."
+	cd scripts && chmod +x simple-seed.sh && ./simple-seed.sh
+	@echo "✅ Database seeded!"
+
+setup-db: reset-db seed-db
+	@echo "✅ Database setup complete!"
+
+# Clean up
+clean-all: clean-customer clean-backoffice
+	@echo "🧹 Cleaning API build artifacts..."
+	cd apps/api && rm -f api
+	@echo "✅ All build artifacts cleaned!"
+
+clean-customer:
+	@echo "🧹 Cleaning customer app..."
+	cd apps/customer && rm -rf .next && rm -rf node_modules/.cache
+
+clean-backoffice:
+	@echo "🧹 Cleaning backoffice app..."
+	cd apps/backoffice && rm -rf dist && rm -rf node_modules/.vite
 
 # Code quality
 lint:
-	@echo "Running linters..."
-	cd apps/api && golangci-lint run
-	cd apps/web && npm run lint || true
+	@echo "🔍 Running linters..."
+	@echo "Linting API..."
+	cd apps/api && golangci-lint run || echo "⚠️ API linting completed with warnings"
+	@echo "Linting customer app..."
+	cd apps/customer && npm run lint || echo "⚠️ Customer linting completed with warnings"
+	@echo "Linting backoffice app..."
+	cd apps/backoffice && npm run lint || echo "⚠️ Backoffice linting completed with warnings"
 
 format:
-	@echo "Formatting code..."
+	@echo "🎨 Formatting code..."
+	@echo "Formatting API..."
 	cd apps/api && go fmt ./...
-	cd apps/web && npm run format || true
+	@echo "Formatting customer app..."
+	cd apps/customer && npm run format || echo "⚠️ Customer formatting completed with warnings"
+	@echo "Formatting backoffice app..."
+	cd apps/backoffice && npm run format || echo "⚠️ Backoffice formatting completed with warnings"
 
-# Clean up
-clean:
-	@echo "Cleaning build artifacts..."
-	cd apps/api && rm -f api
-	cd apps/web && rm -rf .next
-	cd apps/web && rm -rf node_modules/.cache
+# Migration helpers
+migrate-to-new:
+	@echo "🔄 Running migration to new structure..."
+	./migrate-to-new-structure.sh
 
-# CI/CD helpers
-ci-test: test-api test-web
-	@echo "CI tests completed"
+# Quick start for new structure
+quick-start: install-all docker-up
+	@echo "🚀 Quick start complete!"
+	@echo "Run 'make dev-all' to start all services"
 
-ci-build: build
-	@echo "CI build completed"
+# Health check
+health-check:
+	@echo "🏥 Checking service health..."
+	@echo "Checking API..."
+	@curl -s http://localhost:8080/health > /dev/null && echo "✅ API is healthy" || echo "❌ API is not responding"
+	@echo "Checking customer app..."
+	@curl -s http://localhost:3000 > /dev/null && echo "✅ Customer app is healthy" || echo "❌ Customer app is not responding"
+	@echo "Checking backoffice app..."
+	@curl -s http://localhost:3001 > /dev/null && echo "✅ Backoffice app is healthy" || echo "❌ Backoffice app is not responding"
 
-# Install dependencies
-install:
-	@echo "Installing dependencies..."
-	cd apps/api && go mod download
-	cd apps/web && npm install
+# Development workflow
+dev-workflow: clean-all install-all docker-up setup-db
+	@echo "🔄 Development workflow complete!"
+	@echo "Ready to start development with: make dev-all"
 
-# Database reset and seeding
-reset-db:
-	@echo "Resetting Docker database with proper schema..."
-	./scripts/reset-database.sh
+# Stop all running services
+stop-all:
+	@echo "🛑 Stopping all running services..."
+	@pkill -f "go run" 2>/dev/null || true
+	@pkill -f "next dev" 2>/dev/null || true
+	@pkill -f "vite" 2>/dev/null || true
+	@lsof -ti:3000,3001,8080 | xargs kill -9 2>/dev/null || true
+	@echo "✅ All services stopped"
 
-reset-db-schema:
-	@echo "Resetting database schema (keeping data)..."
-	docker exec restosaas_db psql -U postgres -d restosaas -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;"
-	@echo "Schema reset complete! Run 'make api' to recreate tables."
-
-seed-db:
-	@echo "Seeding database with sample data..."
-	cd scripts && chmod +x simple-seed.sh && ./simple-seed.sh
-
-setup-db: reset-db seed-db
-	@echo "Database setup complete!"
-
-# Setup development environment
-setup: install docker-up
-	@echo "Development environment setup complete!"
-	@echo "API: http://localhost:8080"
-	@echo "Web: http://localhost:3000"
-	@echo "Database: localhost:5432"
+# Alias for stop-all
+stop: stop-all

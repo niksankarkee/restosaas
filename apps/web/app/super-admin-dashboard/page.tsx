@@ -25,6 +25,16 @@ import {
 import { api } from '@/lib/api';
 import { useAuth } from '@/contexts/auth-context';
 import { RoleGuard } from '@/components/auth/role-guard';
+import type {
+  CreateOrganizationRequest,
+  CreateRestaurantRequest,
+  UpdateRestaurantRequest,
+  CreateUserRequest,
+  UpdateUserRequest,
+  Organization,
+  RestaurantResponse,
+  UserResponse,
+} from '@restosaas/types';
 import {
   Plus,
   Building2,
@@ -121,7 +131,7 @@ function SuperAdminDashboardContent() {
     }
   };
 
-  const handleCreateOrganization = async (data: any) => {
+  const handleCreateOrganization = async (data: CreateOrganizationRequest) => {
     try {
       const response = await api.post('/super-admin/organizations', data);
       setOrganizations((prev) => [...prev, response.data]);
@@ -131,7 +141,7 @@ function SuperAdminDashboardContent() {
     }
   };
 
-  const handleCreateRestaurant = async (data: any) => {
+  const handleCreateRestaurant = async (data: CreateRestaurantRequest) => {
     try {
       let response;
       if (selectedOrganization) {
@@ -161,7 +171,7 @@ function SuperAdminDashboardContent() {
     }
   };
 
-  const handleUpdateRestaurant = async (data: any) => {
+  const handleUpdateRestaurant = async (data: UpdateRestaurantRequest) => {
     if (!editingRestaurant) return;
 
     try {
@@ -181,7 +191,7 @@ function SuperAdminDashboardContent() {
     }
   };
 
-  const handleAssignOwner = async (data: any) => {
+  const handleAssignOwner = async (data: { userId: string }) => {
     if (!selectedOrganization) return;
 
     try {
@@ -196,7 +206,7 @@ function SuperAdminDashboardContent() {
     }
   };
 
-  const handleAssignUsers = async (data: any) => {
+  const handleAssignUsers = async (data: { userIds: string[] }) => {
     if (!selectedOrganization) return;
 
     try {
@@ -211,7 +221,7 @@ function SuperAdminDashboardContent() {
     }
   };
 
-  const handleCreateUser = async (data: any) => {
+  const handleCreateUser = async (data: CreateUserRequest) => {
     try {
       const response = await api.post('/super-admin/users', data);
       setUsers((prev) => [...prev, response.data]);
@@ -221,7 +231,7 @@ function SuperAdminDashboardContent() {
     }
   };
 
-  const handleUpdateUser = async (data: any) => {
+  const handleUpdateUser = async (data: UpdateUserRequest) => {
     if (!editingUser) return;
 
     try {
@@ -796,7 +806,7 @@ function OrganizationForm({
   onSubmit,
   onCancel,
 }: {
-  onSubmit: (data: any) => void;
+  onSubmit: (data: CreateOrganizationRequest) => void;
   onCancel: () => void;
 }) {
   const [formData, setFormData] = useState({
@@ -839,7 +849,7 @@ function RestaurantForm({
 }: {
   initialData?: Restaurant | null;
   organizations?: Organization[];
-  onSubmit: (data: any) => void;
+  onSubmit: (data: CreateRestaurantRequest | UpdateRestaurantRequest) => void;
   onCancel: () => void;
 }) {
   const [formData, setFormData] = useState({
@@ -1053,7 +1063,7 @@ function AssignOwnerForm({
 }: {
   organization: Organization | null;
   users: User[];
-  onSubmit: (data: any) => void;
+  onSubmit: (data: { userId: string }) => void;
   onCancel: () => void;
 }) {
   const [formData, setFormData] = useState({
@@ -1109,7 +1119,7 @@ function AssignMultipleUsersForm({
 }: {
   organization: Organization | null;
   users: User[];
-  onSubmit: (data: any) => void;
+  onSubmit: (data: { userIds: string[] }) => void;
   onCancel: () => void;
 }) {
   const [formData, setFormData] = useState({
@@ -1171,7 +1181,7 @@ function UserForm({
   onCancel,
 }: {
   initialData?: User | null;
-  onSubmit: (data: any) => void;
+  onSubmit: (data: CreateUserRequest | UpdateUserRequest) => void;
   onCancel: () => void;
 }) {
   const [formData, setFormData] = useState({
@@ -1183,7 +1193,7 @@ function UserForm({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const submitData: any = { ...formData };
+    const submitData: CreateUserRequest | UpdateUserRequest = { ...formData };
     if (initialData) {
       // For updates, don't send password if empty
       if (!submitData.password) {

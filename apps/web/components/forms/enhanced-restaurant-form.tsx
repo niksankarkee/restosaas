@@ -64,7 +64,7 @@ interface EnhancedRestaurantFormProps {
     openHours?: OpeningHourData[];
     images?: ImageData[];
   };
-  onSuccess?: (data: any) => void;
+  onSuccess?: (data: RestaurantFormData) => void;
   onCancel?: () => void;
   isEdit?: boolean;
 }
@@ -147,7 +147,7 @@ export function EnhancedRestaurantForm({
   const updateOpenHour = (
     index: number,
     field: keyof OpeningHourData,
-    value: any
+    value: string | number | boolean
   ) => {
     const updated = [...openHours];
     updated[index] = { ...updated[index], [field]: value };
@@ -263,8 +263,13 @@ export function EnhancedRestaurantForm({
       }
 
       onSuccess?.(response.data);
-    } catch (err: any) {
-      setError(err.response?.data?.error || 'Failed to save restaurant');
+    } catch (err: unknown) {
+      const errorMessage =
+        err && typeof err === 'object' && 'response' in err
+          ? (err as { response?: { data?: { error?: string } } }).response?.data
+              ?.error
+          : 'Failed to save restaurant';
+      setError(errorMessage);
     } finally {
       setIsLoading(false);
     }

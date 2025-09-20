@@ -48,7 +48,7 @@ interface RestaurantFormProps {
     id?: string;
     images?: ImageData[];
   };
-  onSuccess?: (data: any) => void;
+  onSuccess?: (data: { id: string; name: string; slug: string }) => void;
   onCancel?: () => void;
   isEdit?: boolean;
 }
@@ -184,8 +184,13 @@ export function RestaurantForm({
       }
 
       onSuccess?.(response.data);
-    } catch (err: any) {
-      setError(err.response?.data?.error || 'Failed to save restaurant');
+    } catch (err: unknown) {
+      const errorMessage =
+        err && typeof err === 'object' && 'response' in err
+          ? (err as { response?: { data?: { error?: string } } }).response?.data
+              ?.error
+          : 'Failed to save restaurant';
+      setError(errorMessage);
     } finally {
       setIsLoading(false);
     }

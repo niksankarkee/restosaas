@@ -50,7 +50,10 @@ export interface EnhancedDatePickerProps
   placeholder?: string;
 }
 
-const EnhancedDatePicker = forwardRef<any, EnhancedDatePickerProps>(
+const EnhancedDatePicker = forwardRef<
+  HTMLInputElement,
+  EnhancedDatePickerProps
+>(
   (
     {
       className,

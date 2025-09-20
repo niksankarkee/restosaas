@@ -119,7 +119,20 @@ function OrganizationDetailContent() {
     }
   };
 
-  const handleCreateRestaurant = async (data: any) => {
+  const handleCreateRestaurant = async (data: {
+    name: string;
+    slogan: string;
+    place: string;
+    genre: string;
+    budget: string;
+    title: string;
+    description: string;
+    address: string;
+    phone: string;
+    timezone: string;
+    capacity: number;
+    isOpen: boolean;
+  }) => {
     try {
       const response = await api.post(
         `/super-admin/organizations/${organizationId}/restaurants`,
@@ -138,7 +151,20 @@ function OrganizationDetailContent() {
     }
   };
 
-  const handleUpdateRestaurant = async (data: any) => {
+  const handleUpdateRestaurant = async (data: {
+    name?: string;
+    slogan?: string;
+    place?: string;
+    genre?: string;
+    budget?: string;
+    title?: string;
+    description?: string;
+    address?: string;
+    phone?: string;
+    timezone?: string;
+    capacity?: number;
+    isOpen?: boolean;
+  }) => {
     if (!editingRestaurant) return;
 
     try {
@@ -463,7 +489,20 @@ function RestaurantForm({
   onCancel,
 }: {
   initialData?: Restaurant | null;
-  onSubmit: (data: any) => void;
+  onSubmit: (data: {
+    name: string;
+    slogan: string;
+    place: string;
+    genre: string;
+    budget: string;
+    title: string;
+    description: string;
+    address: string;
+    phone: string;
+    timezone: string;
+    capacity: number;
+    isOpen: boolean;
+  }) => void;
   onCancel: () => void;
 }) {
   const [formData, setFormData] = useState({

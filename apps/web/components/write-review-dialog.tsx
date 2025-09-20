@@ -84,12 +84,14 @@ export function WriteReviewDialog({
       setFormData({ customerName: '', title: '', comment: '' });
       onReviewSubmitted?.();
       onClose();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Failed to submit review:', error);
-      setError(
-        error.response?.data?.error ||
-          'Failed to submit review. Please try again.'
-      );
+      const errorMessage =
+        error && typeof error === 'object' && 'response' in error
+          ? (error as { response?: { data?: { error?: string } } }).response
+              ?.data?.error || 'Failed to submit review. Please try again.'
+          : 'Failed to submit review. Please try again.';
+      setError(errorMessage);
     } finally {
       setIsSubmitting(false);
     }

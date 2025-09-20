@@ -36,7 +36,12 @@ interface Restaurant {
   slug: string;
   name: string;
   capacity: number;
-  openHours: any[];
+  openHours: {
+    weekday: number;
+    openTime: string;
+    closeTime: string;
+    isClosed: boolean;
+  }[];
 }
 
 export default function CourseDetailPage() {

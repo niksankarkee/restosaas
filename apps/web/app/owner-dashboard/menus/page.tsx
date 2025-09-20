@@ -15,6 +15,12 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { RichTextEditor } from '@/components/ui/rich-text-editor';
 import { api } from '@/lib/api';
+import type {
+  CreateCourseRequest,
+  CreateMenuRequest,
+  UpdateCourseRequest,
+  UpdateMenuRequest,
+} from '@restosaas/types';
 import {
   Plus,
   Edit,
@@ -105,7 +111,7 @@ function MenusPageContent() {
     }
   };
 
-  const handleCreateCourse = async (data: any) => {
+  const handleCreateCourse = async (data: CreateCourseRequest) => {
     try {
       const restaurantResponse = await api.get('/owner/restaurants/me');
       const restaurants = restaurantResponse.data.restaurants || [];
@@ -124,7 +130,7 @@ function MenusPageContent() {
     }
   };
 
-  const handleCreateMenu = async (data: any) => {
+  const handleCreateMenu = async (data: CreateMenuRequest) => {
     try {
       const restaurantResponse = await api.get('/owner/restaurants/me');
       const restaurants = restaurantResponse.data.restaurants || [];
@@ -143,7 +149,7 @@ function MenusPageContent() {
     }
   };
 
-  const handleUpdateCourse = async (data: any) => {
+  const handleUpdateCourse = async (data: UpdateCourseRequest) => {
     if (!editingCourse) return;
 
     try {
@@ -167,7 +173,7 @@ function MenusPageContent() {
     }
   };
 
-  const handleUpdateMenu = async (data: any) => {
+  const handleUpdateMenu = async (data: UpdateMenuRequest) => {
     if (!editingMenu) return;
 
     try {
@@ -866,7 +872,7 @@ function CourseForm({
   onCancel,
 }: {
   initialData?: Course;
-  onSubmit: (data: any) => void;
+  onSubmit: (data: CreateCourseRequest | UpdateCourseRequest) => void;
   onCancel: () => void;
 }) {
   const [formData, setFormData] = useState({
@@ -1062,7 +1068,7 @@ function MenuForm({
   defaultMealType,
 }: {
   initialData?: Menu;
-  onSubmit: (data: any) => void;
+  onSubmit: (data: CreateMenuRequest | UpdateMenuRequest) => void;
   onCancel: () => void;
   defaultType?: 'DRINK' | 'FOOD';
   defaultMealType?: 'LUNCH' | 'DINNER' | 'BOTH';

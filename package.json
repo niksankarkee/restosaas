@@ -1,11 +1,22 @@
 {
   "name": "restosaas",
+  "version": "1.0.0",
   "private": true,
   "workspaces": [
-    "apps/*"
+    "apps/*",
+    "packages/*"
   ],
   "scripts": {
-    "db:up": "docker compose -f infra/docker-compose.yml up -d",
-    "db:down": "docker compose -f infra/docker-compose.yml down"
+    "dev": "concurrently \"npm run dev:customer\" \"npm run dev:backoffice\" \"npm run dev:api\"",
+    "dev:customer": "cd apps/customer && npm run dev",
+    "dev:backoffice": "cd apps/backoffice && npm run dev",
+    "dev:api": "cd apps/api && go run cmd/api/main.go",
+    "build": "npm run build:customer && npm run build:backoffice",
+    "build:customer": "cd apps/customer && npm run build",
+    "build:backoffice": "cd apps/backoffice && npm run build",
+    "install:all": "npm install && cd apps/customer && npm install && cd ../backoffice && npm install && cd ../../packages/api-client && npm install && cd ../types && npm install && cd ../ui && npm install"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
   }
 }

@@ -12,12 +12,16 @@ import {
 } from '@/components/ui/dialog';
 import { LoginForm } from '@/components/login-form';
 import { useAuth } from '@/contexts/auth-context';
+import type { User } from '@restosaas/types';
 
 export function Navbar() {
   const [isLoginOpen, setIsLoginOpen] = useState(false);
   const { user, isLoading, login, logout } = useAuth();
 
-  const handleLoginSuccess = async (userData: any) => {
+  const handleLoginSuccess = async (userData: {
+    user: User;
+    token: string;
+  }) => {
     setIsLoginOpen(false);
     // The auth context will handle updating the user state
   };

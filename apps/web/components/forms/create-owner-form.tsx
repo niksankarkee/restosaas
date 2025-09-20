@@ -26,7 +26,7 @@ const createOwnerSchema = z.object({
 type CreateOwnerFormData = z.infer<typeof createOwnerSchema>;
 
 interface CreateOwnerFormProps {
-  onSuccess?: (data: any) => void;
+  onSuccess?: (data: { id: string; name: string; email: string }) => void;
   onCancel?: () => void;
 }
 
@@ -49,8 +49,13 @@ export function CreateOwnerForm({ onSuccess, onCancel }: CreateOwnerFormProps) {
     try {
       const response = await api.post('/super-admin/owners', data);
       onSuccess?.(response.data);
-    } catch (err: any) {
-      setError(err.response?.data?.error || 'Failed to create owner');
+    } catch (err: unknown) {
+      const errorMessage =
+        err && typeof err === 'object' && 'response' in err
+          ? (err as { response?: { data?: { error?: string } } }).response?.data
+              ?.error
+          : 'Failed to create owner';
+      setError(errorMessage);
     } finally {
       setIsLoading(false);
     }

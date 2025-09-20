@@ -24,6 +24,157 @@ func NewPublicHandler(db *gorm.DB) *PublicHandler {
 	}
 }
 
+// CreateRestaurantReservation creates a reservation for a specific restaurant (slug from URL)
+func (h *PublicHandler) CreateRestaurantReservation(c *gin.Context) {
+	slug := c.Param("slug")
+	if slug == "" {
+		c.JSON(400, gin.H{"error": "restaurant slug is required"})
+		return
+	}
+
+	type Req struct {
+		Date            string      `json:"date"`
+		Time            string      `json:"time"`
+		PartySize       interface{} `json:"partySize"` // Accept both string and int
+		SpecialRequests string      `json:"specialRequests"`
+		CustomerName    string      `json:"customerName"`
+		CustomerEmail   string      `json:"customerEmail"`
+		CustomerPhone   string      `json:"customerPhone"`
+	}
+	var req Req
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(400, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Convert PartySize to int
+	var partySize int
+	switch v := req.PartySize.(type) {
+	case int:
+		partySize = v
+	case float64:
+		partySize = int(v)
+	case string:
+		var err error
+		partySize, err = strconv.Atoi(v)
+		if err != nil {
+			c.JSON(400, gin.H{"error": "invalid partySize format"})
+			return
+		}
+	default:
+		c.JSON(400, gin.H{"error": "partySize must be a number"})
+		return
+	}
+
+	// Find restaurant by slug
+	var resto db.Restaurant
+	if err := h.DB.Where("slug = ?", slug).First(&resto).Error; err != nil {
+		c.JSON(404, gin.H{"error": "restaurant not found"})
+		return
+	}
+
+	// Parse date and time
+	dateTimeStr := req.Date + "T" + req.Time + ":00Z"
+	startsAt, err := time.Parse(time.RFC3339, dateTimeStr)
+	if err != nil {
+		c.JSON(400, gin.H{"error": "invalid date or time format"})
+		return
+	}
+
+	// Create reservation
+	reservation := db.Reservation{
+		ID:           uuid.New(),
+		RestaurantID: resto.ID,
+		StartsAt:     startsAt,
+		DurationMin:  120, // Default 2 hours
+		PartySize:    partySize,
+		Status:       "PENDING",
+		CreatedAt:    time.Now(),
+		Customer: db.Customer{
+			Name:  req.CustomerName,
+			Email: req.CustomerEmail,
+			Phone: req.CustomerPhone,
+		},
+	}
+
+	if err := h.DB.Create(&reservation).Error; err != nil {
+		c.JSON(500, gin.H{"error": "failed to create reservation"})
+		return
+	}
+
+	c.JSON(201, gin.H{
+		"id":        reservation.ID,
+		"status":    reservation.Status,
+		"startsAt":  reservation.StartsAt,
+		"partySize": reservation.PartySize,
+		"restaurant": gin.H{
+			"id":   resto.ID,
+			"name": resto.Name,
+			"slug": resto.Slug,
+		},
+	})
+}
+
+// CreateRestaurantReview creates a review for a specific restaurant (slug from URL)
+func (h *PublicHandler) CreateRestaurantReview(c *gin.Context) {
+	slug := c.Param("slug")
+	if slug == "" {
+		c.JSON(400, gin.H{"error": "restaurant slug is required"})
+		return
+	}
+
+	type Req struct {
+		Rating        int    `json:"rating"`
+		Title         string `json:"title"`
+		Comment       string `json:"comment"`
+		CustomerName  string `json:"customerName"`
+		CustomerEmail string `json:"customerEmail"`
+	}
+	var req Req
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(400, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Find restaurant by slug
+	var resto db.Restaurant
+	if err := h.DB.Where("slug = ?", slug).First(&resto).Error; err != nil {
+		c.JSON(404, gin.H{"error": "restaurant not found"})
+		return
+	}
+
+	// Create review
+	review := db.Review{
+		ID:           uuid.New(),
+		RestaurantID: resto.ID,
+		Rating:       req.Rating,
+		Title:        req.Title,
+		Comment:      req.Comment,
+		CustomerName: req.CustomerName,
+		IsApproved:   false,
+		CreatedAt:    time.Now(),
+		UpdatedAt:    time.Now(),
+	}
+
+	if err := h.DB.Create(&review).Error; err != nil {
+		c.JSON(500, gin.H{"error": "failed to create review"})
+		return
+	}
+
+	c.JSON(201, gin.H{
+		"id":         review.ID,
+		"rating":     review.Rating,
+		"title":      review.Title,
+		"comment":    review.Comment,
+		"isApproved": review.IsApproved,
+		"restaurant": gin.H{
+			"id":   resto.ID,
+			"name": resto.Name,
+			"slug": resto.Slug,
+		},
+	})
+}
+
 // ListRestaurants godoc
 // @Summary List restaurants
 // @Description Get a list of restaurants with pagination and filtering

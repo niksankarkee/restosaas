@@ -1,0 +1,76 @@
+# RestoSaaS New Structure Makefile
+
+.PHONY: help setup dev build clean install-all
+
+help: ## Show this help message
+	@echo "RestoSaaS - New Monorepo Structure"
+	@echo "=================================="
+	@echo ""
+	@echo "Available commands:"
+	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2}'
+
+setup: ## Setup the new monorepo structure
+	@echo "🚀 Setting up new RestoSaaS monorepo structure..."
+	@./setup-new-structure.sh
+
+install-all: ## Install all dependencies
+	@echo "📦 Installing all dependencies..."
+	npm install
+	cd apps/customer && npm install
+	cd ../backoffice && npm install
+	cd ../../packages/types && npm install
+	cd ../api-client && npm install
+	cd ../ui && npm install
+
+dev: ## Start all development servers
+	@echo "🚀 Starting all development servers..."
+	npm run dev
+
+dev-customer: ## Start customer app only
+	@echo "🚀 Starting customer app..."
+	cd apps/customer && npm run dev
+
+dev-backoffice: ## Start backoffice app only
+	@echo "🚀 Starting backoffice app..."
+	cd apps/backoffice && npm run dev
+
+dev-api: ## Start API server only
+	@echo "🚀 Starting API server..."
+	cd apps/api && go run cmd/api/main.go
+
+build: ## Build all applications
+	@echo "🏗️ Building all applications..."
+	npm run build
+
+build-customer: ## Build customer app only
+	@echo "🏗️ Building customer app..."
+	cd apps/customer && npm run build
+
+build-backoffice: ## Build backoffice app only
+	@echo "🏗️ Building backoffice app..."
+	cd apps/backoffice && npm run build
+
+clean: ## Clean all build artifacts
+	@echo "🧹 Cleaning build artifacts..."
+	cd apps/customer && rm -rf .next
+	cd apps/backoffice && rm -rf dist
+	cd packages/types && rm -rf dist
+	cd packages/api-client && rm -rf dist
+	cd packages/ui && rm -rf dist
+
+migrate: ## Run migration script
+	@echo "🔄 Running migration script..."
+	@./migrate-to-new-structure.sh
+
+# Database commands (unchanged)
+reset-db: ## Reset database
+	@echo "🗄️ Resetting database..."
+	cd apps/api && make reset-db
+
+seed-db: ## Seed database
+	@echo "🌱 Seeding database..."
+	cd apps/api && make seed-db
+
+setup-db: ## Setup database
+	@echo "🗄️ Setting up database..."
+	cd apps/api && make setup-db

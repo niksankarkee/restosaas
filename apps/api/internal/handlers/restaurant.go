@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/example/restosaas/apps/api/internal/db"
+	"github.com/example/restosaas/apps/api/internal/services"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
@@ -719,6 +720,104 @@ func (h *RestaurantHandler) GetRestaurantReviews(c *gin.Context) {
 		"reviews":     reviews,
 		"avgRating":   avgRating,
 		"reviewCount": reviewCount,
+	})
+}
+
+// POST /api/owner/restaurants/:id/images/single - Upload single image
+func (h *RestaurantHandler) UploadSingleImage(c *gin.Context) {
+	// Get user ID from context
+	userID, exists := c.Get("uid")
+	if !exists {
+		c.JSON(401, gin.H{"error": "unauthorized"})
+		return
+	}
+
+	// Get restaurant ID from URL
+	restaurantID := c.Param("id")
+	restaurantUUID, err := uuid.Parse(restaurantID)
+	if err != nil {
+		c.JSON(400, gin.H{"error": "invalid restaurant ID"})
+		return
+	}
+
+	var req ImageRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(400, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Verify restaurant ownership
+	var orgMember db.OrgMember
+	if err := h.DB.Where("user_id = ?", userID).First(&orgMember).Error; err != nil {
+		c.JSON(404, gin.H{"error": "organization not found"})
+		return
+	}
+
+	var restaurant db.Restaurant
+	if err := h.DB.Where("id = ? AND org_id = ?", restaurantUUID, orgMember.OrgID).First(&restaurant).Error; err != nil {
+		c.JSON(404, gin.H{"error": "restaurant not found"})
+		return
+	}
+
+	// Initialize Cloudinary service
+	cloudinaryService, err := services.NewCloudinaryService()
+	if err != nil {
+		c.JSON(500, gin.H{"error": "failed to initialize image service", "details": err.Error()})
+		return
+	}
+
+	// Upload image to Cloudinary
+	var imageURL string
+	if strings.HasPrefix(req.URL, "data:image/") {
+		// Handle base64 image
+		result, err := cloudinaryService.UploadBase64Image(c.Request.Context(), req.URL, "restosaas/restaurants")
+		if err != nil {
+			c.JSON(500, gin.H{"error": "failed to upload image to cloud storage"})
+			return
+		}
+		imageURL = result.SecureURL
+	} else {
+		// Handle URL image
+		result, err := cloudinaryService.UploadImageFromURL(c.Request.Context(), req.URL, "restosaas/restaurants")
+		if err != nil {
+			c.JSON(500, gin.H{"error": "failed to upload image to cloud storage"})
+			return
+		}
+		imageURL = result.SecureURL
+	}
+
+	// Create image record in database
+	image := db.Image{
+		ID:           uuid.New(),
+		RestaurantID: restaurantUUID,
+		URL:          imageURL,
+		Alt:          req.Alt,
+		IsMain:       req.IsMain,
+		DisplayOrder: req.DisplayOrder,
+	}
+
+	if err := h.DB.Create(&image).Error; err != nil {
+		c.JSON(500, gin.H{"error": "failed to create image record"})
+		return
+	}
+
+	// If this is the main image, update restaurant
+	if req.IsMain {
+		if err := h.DB.Model(&restaurant).Update("main_image_id", image.ID).Error; err != nil {
+			c.JSON(500, gin.H{"error": "failed to set main image"})
+			return
+		}
+	}
+
+	c.JSON(201, gin.H{
+		"message": "Image uploaded successfully",
+		"image": gin.H{
+			"id":           image.ID,
+			"url":          image.URL,
+			"alt":          image.Alt,
+			"isMain":       image.IsMain,
+			"displayOrder": image.DisplayOrder,
+		},
 	})
 }
 

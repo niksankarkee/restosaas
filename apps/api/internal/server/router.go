@@ -45,7 +45,9 @@ func Mount(r *gin.Engine, gdb *gorm.DB) {
 		api.GET("/restaurants/:slug/courses", course.PublicGetCourses)
 		api.GET("/restaurants/:slug/courses/:courseId", course.PublicGetCourse)
 		api.GET("/restaurants/:slug/reviews", restaurant.GetRestaurantReviews)
+		api.POST("/restaurants/:slug/reviews", pub.CreateRestaurantReview)
 		api.GET("/restaurants/:slug/slots", pub.GetSlots)
+		api.POST("/restaurants/:slug/reservations", pub.CreateRestaurantReservation)
 		api.POST("/reservations", pub.CreateReservation)
 		api.POST("/reviews", pub.CreateReview)
 		api.GET("/landing/:slug", adm.PublicLanding)
@@ -58,6 +60,7 @@ func Mount(r *gin.Engine, gdb *gorm.DB) {
 
 		// User authentication routes (PUBLIC - no auth required)
 		api.POST("/auth/register", usr.CreateUser) // Register new user
+		api.POST("/users", usr.CreateUser)         // Register new user (alternative endpoint)
 		api.POST("/auth/login", usr.Login)         // Login user
 
 		// OAuth routes (PUBLIC - no auth required)
@@ -78,7 +81,6 @@ func Mount(r *gin.Engine, gdb *gorm.DB) {
 	users.Use(auth.RequireAuth(string(db.RoleSuper), string(db.RoleOwner)), auth.AddTokenToResponse())
 	{
 		users.GET("", usr.ListUsers)         // GET /api/users
-		users.POST("", usr.CreateUser)       // POST /api/users
 		users.GET("/:id", usr.GetUser)       // GET /api/users/:id
 		users.PUT("/:id", usr.UpdateUser)    // PUT /api/users/:id
 		users.DELETE("/:id", usr.DeleteUser) // DELETE /api/users/:id
@@ -139,6 +141,7 @@ func Mount(r *gin.Engine, gdb *gorm.DB) {
 		restaurantGroup.DELETE("/:id", restaurant.DeleteRestaurant)                    // Delete restaurant
 		restaurantGroup.POST("/:id/hours", restaurant.SetOpeningHours)                 // Set opening hours
 		restaurantGroup.POST("/:id/images", restaurant.UploadImages)                   // Upload images
+		restaurantGroup.POST("/:id/images/single", restaurant.UploadSingleImage)       // Upload single image
 		restaurantGroup.POST("/:id/images/:imageId/set-main", restaurant.SetMainImage) // Set main image
 	}
 

@@ -72,7 +72,17 @@ function CourseDetailContent() {
     }
   };
 
-  const handleUpdateCourse = async (data: any) => {
+  const handleUpdateCourse = async (data: {
+    title: string;
+    description: string;
+    coursePrice: number;
+    originalPrice?: number;
+    numberOfItems: number;
+    stayTime: number;
+    courseContent: string;
+    precautions: string;
+    imageUrl?: string;
+  }) => {
     if (!course) return;
 
     try {
@@ -340,7 +350,17 @@ function CourseForm({
   onCancel,
 }: {
   initialData: Course;
-  onSubmit: (data: any) => void;
+  onSubmit: (data: {
+    title: string;
+    description: string;
+    coursePrice: number;
+    originalPrice?: number;
+    numberOfItems: number;
+    stayTime: number;
+    courseContent: string;
+    precautions: string;
+    imageUrl?: string;
+  }) => void;
   onCancel: () => void;
 }) {
   const [formData, setFormData] = useState({

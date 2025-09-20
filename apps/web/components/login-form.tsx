@@ -15,9 +15,10 @@ import { Label } from '@/components/ui/label';
 import { api } from '@/lib/api';
 import { useAuth } from '@/contexts/auth-context';
 import { Chrome, Facebook, Twitter } from 'lucide-react';
+import type { User } from '@restosaas/types';
 
 interface LoginFormProps extends React.ComponentPropsWithoutRef<'div'> {
-  onSuccess?: (user: any) => void;
+  onSuccess?: (user: { user: User; token: string }) => void;
 }
 
 export function LoginForm({ className, onSuccess, ...props }: LoginFormProps) {
@@ -125,10 +126,13 @@ export function LoginForm({ className, onSuccess, ...props }: LoginFormProps) {
             onSuccess?.(data.user);
             popup.close();
             window.removeEventListener('message', handleMessage);
-          } catch (err: any) {
-            setError(
-              err.response?.data?.error || `Failed to login with ${provider}`
-            );
+          } catch (err: unknown) {
+            const errorMessage =
+              err && typeof err === 'object' && 'response' in err
+                ? (err as { response?: { data?: { error?: string } } }).response
+                    ?.data?.error || `Failed to login with ${provider}`
+                : `Failed to login with ${provider}`;
+            setError(errorMessage);
             popup.close();
             window.removeEventListener('message', handleMessage);
           }
@@ -149,8 +153,10 @@ export function LoginForm({ className, onSuccess, ...props }: LoginFormProps) {
           setIsOAuthLoading(null);
         }
       }, 1000);
-    } catch (err: any) {
-      setError(err.message || `Failed to login with ${provider}`);
+    } catch (err: unknown) {
+      setError(
+        err instanceof Error ? err.message : `Failed to login with ${provider}`
+      );
     } finally {
       setIsOAuthLoading(null);
     }
@@ -203,7 +209,8 @@ export function LoginForm({ className, onSuccess, ...props }: LoginFormProps) {
         // Login using auth context
         await login(formData.email, formData.password);
         // Only call onSuccess if login was successful
-        onSuccess?.(null); // Auth context will handle user state
+        // Note: Auth context will handle user state, so we don't need to call onSuccess here
+        // onSuccess?.(null); // Auth context will handle user state
       } else {
         // Signup
         const { data } = await api.post('/auth/register', {
@@ -217,9 +224,14 @@ export function LoginForm({ className, onSuccess, ...props }: LoginFormProps) {
         // Only call onSuccess if signup was successful
         onSuccess?.(data);
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       // Set error message and do NOT call onSuccess
-      setError(err.response?.data?.error || 'An error occurred');
+      const errorMessage =
+        err && typeof err === 'object' && 'response' in err
+          ? (err as { response?: { data?: { error?: string } } }).response?.data
+              ?.error || 'An error occurred'
+          : 'An error occurred';
+      setError(errorMessage);
     } finally {
       setIsLoading(false);
     }

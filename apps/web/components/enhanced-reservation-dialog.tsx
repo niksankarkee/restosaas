@@ -246,12 +246,14 @@ export function EnhancedReservationDialog({
       });
       onReservationSubmitted?.();
       onClose();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Failed to make reservation:', error);
-      setError(
-        error.response?.data?.error ||
-          'Failed to make reservation. Please try again.'
-      );
+      const errorMessage =
+        error && typeof error === 'object' && 'response' in error
+          ? (error as { response?: { data?: { error?: string } } }).response
+              ?.data?.error || 'Failed to make reservation. Please try again.'
+          : 'Failed to make reservation. Please try again.';
+      setError(errorMessage);
     } finally {
       setIsSubmitting(false);
     }

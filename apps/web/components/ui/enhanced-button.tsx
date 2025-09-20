@@ -98,17 +98,14 @@ const EnhancedButton = forwardRef<HTMLButtonElement, EnhancedButtonProps>(
 
     if (asChild) {
       // When asChild is true, clone the child element and apply button styles
-      return React.cloneElement(
-        children as React.ReactElement,
-        {
-          ...props,
-          className: cn(
-            buttonVariants({ variant, size, className }),
-            ((children as React.ReactElement).props as any)?.className
-          ),
-          disabled: disabled || loading,
-        } as any
-      );
+      return React.cloneElement(children as React.ReactElement, {
+        ...props,
+        className: cn(
+          buttonVariants({ variant, size, className }),
+          (children as React.ReactElement).props?.className
+        ),
+        disabled: disabled || loading,
+      });
     }
 
     return (

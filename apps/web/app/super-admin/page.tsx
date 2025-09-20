@@ -150,7 +150,11 @@ function SuperAdminDashboardContent() {
     }
   };
 
-  const handleOwnerCreated = (data: any) => {
+  const handleOwnerCreated = (data: {
+    id: string;
+    name: string;
+    email: string;
+  }) => {
     setOwners((prev) => [data, ...prev]);
     setIsCreateDialogOpen(false);
     fetchUsers(); // Refresh users list

@@ -24,7 +24,7 @@ func IssueToken(userID, role string) (string, error) {
 	return t.SignedString(secret)
 }
 
-// In production, verify Clerk JWT via JWKS. For local dev, we fallback to a demo header.
+// RequireAuth middleware validates JWT tokens and checks user roles
 func RequireAuth(roles ...string) gin.HandlerFunc {
 	allowed := map[string]bool{}
 	for _, r := range roles {
